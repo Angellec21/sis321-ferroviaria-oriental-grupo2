@@ -1,0 +1,462 @@
+{
+  "info": {
+    "name": "DSS Ferroviaria Oriental API",
+    "description": "Colección completa: autenticación, usuarios, catálogo, reportes (Query A/B/C), ventas y pagos",
+    "version": "2.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:3000", "type": "string" },
+    { "key": "access_token", "value": "", "type": "string" },
+    { "key": "refresh_token", "value": "", "type": "string" },
+    { "key": "id_venta", "value": "", "type": "string" },
+    { "key": "id_viaje", "value": "1", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Autenticación",
+      "item": [
+        {
+          "name": "Registro de Usuario",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"nombre\": \"Juan Pérez García\",\n  \"email\": \"juan.perez@ferroviaria.com.co\",\n  \"documento_identidad\": \"1234567890\",\n  \"password\": \"Password123!\",\n  \"id_estacion\": 1\n}" },
+            "url": { "raw": "{{base_url}}/api/auth/registro", "host": ["{{base_url}}"], "path": ["api", "auth", "registro"] },
+            "description": "Registrar nuevo usuario en el sistema (rol operador por defecto)"
+          },
+          "response": []
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  let jsonData = pm.response.json();",
+                  "  pm.environment.set('access_token', jsonData.tokens.accessToken);",
+                  "  pm.environment.set('refresh_token', jsonData.tokens.refreshToken);",
+                  "  console.log('✅ Tokens guardados en variables');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"admin@ferroviaria.com.co\",\n  \"password\": \"admin123\"\n}" },
+            "url": { "raw": "{{base_url}}/api/auth/login", "host": ["{{base_url}}"], "path": ["api", "auth", "login"] },
+            "description": "Autenticar usuario y obtener JWT (guarda los tokens automáticamente)"
+          },
+          "response": []
+        },
+        {
+          "name": "Obtener Datos Usuario (me)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}", "type": "text" }],
+            "url": { "raw": "{{base_url}}/api/auth/me", "host": ["{{base_url}}"], "path": ["api", "auth", "me"] },
+            "description": "Obtener datos del usuario autenticado"
+          },
+          "response": []
+        },
+        {
+          "name": "Renovar Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  let jsonData = pm.response.json();",
+                  "  pm.environment.set('access_token', jsonData.tokens.accessToken);",
+                  "  console.log('✅ Access token renovado');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"refreshToken\": \"{{refresh_token}}\"\n}" },
+            "url": { "raw": "{{base_url}}/api/auth/refresh", "host": ["{{base_url}}"], "path": ["api", "auth", "refresh"] },
+            "description": "Renovar access token usando refresh token"
+          },
+          "response": []
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"refreshToken\": \"{{refresh_token}}\"\n}" },
+            "url": { "raw": "{{base_url}}/api/auth/logout", "host": ["{{base_url}}"], "path": ["api", "auth", "logout"] },
+            "description": "Cerrar sesión y revocar refresh token"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Gestión de Usuarios",
+      "item": [
+        {
+          "name": "Listar Usuarios",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}", "type": "text" }],
+            "url": {
+              "raw": "{{base_url}}/api/usuarios?page=1&limit=10",
+              "host": ["{{base_url}}"], "path": ["api", "usuarios"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" },
+                { "key": "id_rol", "value": "3", "disabled": true },
+                { "key": "buscar", "value": "admin", "disabled": true }
+              ]
+            },
+            "description": "Listar usuarios con paginación (todos los estados)"
+          },
+          "response": []
+        },
+        {
+          "name": "Crear Usuario con Rol (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"nombre\": \"Nuevo Gerente\",\n  \"email\": \"nuevo.gerente@ferroviaria.com.co\",\n  \"documento_identidad\": \"9998887776\",\n  \"password\": \"Password123!\",\n  \"id_rol\": 2,\n  \"id_estacion\": 1\n}" },
+            "url": { "raw": "{{base_url}}/api/usuarios", "host": ["{{base_url}}"], "path": ["api", "usuarios"] },
+            "description": "Crear usuario con un rol específico (solo administrador)"
+          },
+          "response": []
+        },
+        {
+          "name": "Obtener Usuario por ID",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}", "type": "text" }],
+            "url": { "raw": "{{base_url}}/api/usuarios/1", "host": ["{{base_url}}"], "path": ["api", "usuarios", "1"] },
+            "description": "Obtener detalles de un usuario específico"
+          },
+          "response": []
+        },
+        {
+          "name": "Actualizar Usuario",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"nombre\": \"Juan Pérez García Actualizado\",\n  \"id_rol\": 2,\n  \"estado\": true\n}" },
+            "url": { "raw": "{{base_url}}/api/usuarios/1", "host": ["{{base_url}}"], "path": ["api", "usuarios", "1"] },
+            "description": "Actualizar datos de un usuario (también se usa para reactivar, con estado:true)"
+          },
+          "response": []
+        },
+        {
+          "name": "Cambiar Contraseña (propia)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"password_actual\": \"admin123\",\n  \"password_nueva\": \"NuevaPassword123!\"\n}" },
+            "url": { "raw": "{{base_url}}/api/usuarios/cambiar-password", "host": ["{{base_url}}"], "path": ["api", "usuarios", "cambiar-password"] },
+            "description": "Cambiar contraseña del usuario autenticado"
+          },
+          "response": []
+        },
+        {
+          "name": "Resetear Contraseña (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"nueva_password\": \"TempPassword123!\"\n}" },
+            "url": { "raw": "{{base_url}}/api/usuarios/2/resetear-password", "host": ["{{base_url}}"], "path": ["api", "usuarios", "2", "resetear-password"] },
+            "description": "Resetear contraseña de otro usuario (Admin only)"
+          },
+          "response": []
+        },
+        {
+          "name": "Eliminar Usuario (Admin, soft delete)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}", "type": "text" }],
+            "url": { "raw": "{{base_url}}/api/usuarios/2", "host": ["{{base_url}}"], "path": ["api", "usuarios", "2"] },
+            "description": "Desactivar usuario (soft delete, estado = false)"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Catálogo",
+      "item": [
+        {
+          "name": "Listar Roles",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}", "type": "text" }],
+            "url": { "raw": "{{base_url}}/api/catalogo/roles", "host": ["{{base_url}}"], "path": ["api", "catalogo", "roles"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Listar Estaciones",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}", "type": "text" }],
+            "url": { "raw": "{{base_url}}/api/catalogo/estaciones", "host": ["{{base_url}}"], "path": ["api", "catalogo", "estaciones"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Listar Trenes",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}", "type": "text" }],
+            "url": { "raw": "{{base_url}}/api/catalogo/trenes", "host": ["{{base_url}}"], "path": ["api", "catalogo", "trenes"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Listar Rutas",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}", "type": "text" }],
+            "url": { "raw": "{{base_url}}/api/catalogo/rutas", "host": ["{{base_url}}"], "path": ["api", "catalogo", "rutas"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Listar Viajes",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}", "type": "text" }],
+            "url": { "raw": "{{base_url}}/api/catalogo/viajes", "host": ["{{base_url}}"], "path": ["api", "catalogo", "viajes"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Asientos Disponibles por Viaje",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}", "type": "text" }],
+            "url": {
+              "raw": "{{base_url}}/api/catalogo/viajes/{{id_viaje}}/asientos",
+              "host": ["{{base_url}}"], "path": ["api", "catalogo", "viajes", "{{id_viaje}}", "asientos"]
+            },
+            "description": "Asientos libres de un viaje (excluye reservas activas/pagadas)"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Reportes (Query A, B, C)",
+      "item": [
+        {
+          "name": "Query A - Ingresos por Método de Pago",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}", "type": "text" }],
+            "url": {
+              "raw": "{{base_url}}/api/reportes/ingresos?fecha_inicio=2026-01-01&fecha_fin=2026-12-31",
+              "host": ["{{base_url}}"], "path": ["api", "reportes", "ingresos"],
+              "query": [
+                { "key": "fecha_inicio", "value": "2026-01-01" },
+                { "key": "fecha_fin", "value": "2026-12-31" }
+              ]
+            },
+            "description": "Comparativa de ingresos totales por método de pago (QR/Transferencia/Ventanilla) en un rango de fechas"
+          },
+          "response": []
+        },
+        {
+          "name": "Query B - Ocupación por Ruta y Vagón",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}", "type": "text" }],
+            "url": {
+              "raw": "{{base_url}}/api/reportes/ocupacion?fecha_inicio=2026-01-01&fecha_fin=2026-12-31",
+              "host": ["{{base_url}}"], "path": ["api", "reportes", "ocupacion"],
+              "query": [
+                { "key": "fecha_inicio", "value": "2026-01-01" },
+                { "key": "fecha_fin", "value": "2026-12-31" }
+              ]
+            },
+            "description": "Tasa de ocupación promedio por ruta y tipo de vagón (pasajeros/carga)"
+          },
+          "response": []
+        },
+        {
+          "name": "Query C - Mantenimiento Próximo",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}", "type": "text" }],
+            "url": { "raw": "{{base_url}}/api/reportes/mantenimiento", "host": ["{{base_url}}"], "path": ["api", "reportes", "mantenimiento"] },
+            "description": "Trenes con vencimiento próximo de mantenimiento preventivo"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Ventas y Reservas",
+      "item": [
+        {
+          "name": "Crear Venta (con reservas)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  let jsonData = pm.response.json();",
+                  "  pm.environment.set('id_venta', jsonData.data.venta.id_venta);",
+                  "  console.log('✅ id_venta guardado:', jsonData.data.venta.id_venta);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"id_estacion\": 1,\n  \"id_viaje\": {{id_viaje}},\n  \"pasajeros\": [\n    { \"id_asiento\": 4, \"nombre_pasajero\": \"Postman Tester\", \"documento_pasajero\": \"0000000001\" }\n  ]\n}" },
+            "url": { "raw": "{{base_url}}/api/ventas", "host": ["{{base_url}}"], "path": ["api", "ventas"] },
+            "description": "Crea una venta con una o más reservas en una transacción (ajusta id_asiento según disponibilidad)"
+          },
+          "response": []
+        },
+        {
+          "name": "Listar Ventas",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}", "type": "text" }],
+            "url": { "raw": "{{base_url}}/api/ventas?page=1&limit=20", "host": ["{{base_url}}"], "path": ["api", "ventas"], "query": [{ "key": "page", "value": "1" }, { "key": "limit", "value": "20" }] }
+          },
+          "response": []
+        },
+        {
+          "name": "Detalle de Venta (reservas + pagos)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}", "type": "text" }],
+            "url": { "raw": "{{base_url}}/api/ventas/{{id_venta}}", "host": ["{{base_url}}"], "path": ["api", "ventas", "{{id_venta}}"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Cancelar Reserva",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}", "type": "text" }],
+            "url": { "raw": "{{base_url}}/api/ventas/reservas/1/cancelar", "host": ["{{base_url}}"], "path": ["api", "ventas", "reservas", "1", "cancelar"] },
+            "description": "Cancela una reserva y libera el asiento (ajusta el id de reserva)"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Pagos",
+      "item": [
+        {
+          "name": "Registrar Pago QR",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"id_venta\": {{id_venta}},\n  \"monto\": 50000,\n  \"tipo_pago\": \"qr\",\n  \"detalle_especifico\": {\n    \"codigo_qr\": \"QR-POSTMAN-001\",\n    \"transaccion_externa_id\": \"EXT-POSTMAN-001\"\n  }\n}" },
+            "url": { "raw": "{{base_url}}/api/pagos", "host": ["{{base_url}}"], "path": ["api", "pagos"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Registrar Pago Transferencia",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"id_venta\": {{id_venta}},\n  \"monto\": 50000,\n  \"tipo_pago\": \"transferencia\",\n  \"detalle_especifico\": {\n    \"banco_origen\": \"Banco Unión\",\n    \"numero_referencia_transferencia\": \"REF-POSTMAN-001\"\n  }\n}" },
+            "url": { "raw": "{{base_url}}/api/pagos", "host": ["{{base_url}}"], "path": ["api", "pagos"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Registrar Pago Ventanilla",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"id_venta\": {{id_venta}},\n  \"monto\": 50000,\n  \"tipo_pago\": \"ventanilla\",\n  \"detalle_especifico\": {\n    \"id_usuario_operador\": 1,\n    \"metodo_pago_local\": \"efectivo\"\n  }\n}" },
+            "url": { "raw": "{{base_url}}/api/pagos", "host": ["{{base_url}}"], "path": ["api", "pagos"] },
+            "description": "id_usuario_operador referencia dw.usuario_venta, no dw.usuarios (auth)"
+          },
+          "response": []
+        },
+        {
+          "name": "Listar Pagos",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}", "type": "text" }],
+            "url": {
+              "raw": "{{base_url}}/api/pagos?page=1&limit=20",
+              "host": ["{{base_url}}"], "path": ["api", "pagos"],
+              "query": [{ "key": "page", "value": "1" }, { "key": "limit", "value": "20" }, { "key": "tipo_pago", "value": "qr", "disabled": true }]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Utilidades",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/health", "host": ["{{base_url}}"], "path": ["health"] },
+            "description": "Verificar que el servidor está activo"
+          },
+          "response": []
+        },
+        {
+          "name": "Documentación API",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api", "host": ["{{base_url}}"], "path": ["api"] },
+            "description": "Ver documentación de endpoints"
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
