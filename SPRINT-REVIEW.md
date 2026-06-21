@@ -42,7 +42,7 @@ Características:
 2. Body muestra:
    ```json
    {
-     "email": "admin@ferroviaria.com.co",
+     "email": "admin@ferroviariaoriental.com.bo",
      "password": "admin123"
    }
    ```
@@ -56,7 +56,7 @@ Características:
      "data": {
        "id_usuario": 1,
        "nombre": "Administrador Sistema",
-       "email": "admin@ferroviaria.com.co",
+       "email": "admin@ferroviariaoriental.com.bo",
        "rol": "administrador",
        "permisos": [
          "usuarios:crear",
@@ -130,7 +130,7 @@ Abrir `database/01-auth-schema.sql` en VS Code
        {
          "id_usuario": 1,
          "nombre": "Administrador Sistema",
-         "email": "admin@ferroviaria.com.co",
+         "email": "admin@ferroviariaoriental.com.bo",
          "id_rol": 1,
          "rol_nombre": "administrador",
          "estado": true
@@ -161,7 +161,7 @@ Abrir `database/01-auth-schema.sql` en VS Code
    ```json
    {
      "nombre": "Carlos Gómez",
-     "email": "carlos@ferroviaria.com.co",
+     "email": "carlos@ferroviariaoriental.com.bo",
      "documento_identidad": "98765432",
      "password": "Pass1234!",
      "id_estacion": 1
@@ -186,7 +186,7 @@ export const registro = async (req, res) => {
 
 ---
 
-### [8:00-9:30] Acceso según Rol
+### [8:00-8:45] Acceso según Rol
 
 **Mostrar en VS Code:**
 
@@ -198,7 +198,8 @@ Abrir `src/middleware/auth.js`:
  */
 export const requirePermission = (permisosRequeridos) => {
   return (req, res, next) => {
-    if (!req.usuario.permisos.includes(p)) {
+    const tienePermiso = permisosRequeridos.some((p) => req.usuario.permisos.includes(p));
+    if (!tienePermiso) {
       return res.status(403).json({
         success: false,
         message: 'Permiso insuficiente',
@@ -216,13 +217,26 @@ export const requirePermission = (permisosRequeridos) => {
 
 ---
 
+### [8:45-9:30] Recuperación de Contraseña
+
+**En Postman:**
+
+1. **POST /api/auth/olvide-password** con `{ "email": "admin@ferroviariaoriental.com.bo" }`
+2. Mostrar respuesta: mismo mensaje exista o no el email (no revela usuarios), y en modo
+   desarrollo incluye `dev_token` (en producción se enviaría por correo)
+3. **POST /api/auth/resetear-password** con `{ "token": "...", "password_nueva": "..." }`
+
+**Destacar:**
+- Token de un solo uso, expira en 1 hora
+- Validación de entradas con `express-validator` en registro/login/recuperación
+
 ### [9:30-10:00] Cierre y GitHub
 
 **Mostrar:**
 
 1. GitHub repo creado:
    ```
-   https://github.com/[usuario]/sis321-ferroviaria-grupo1
+   https://github.com/TU_USUARIO/sis321-ferroviaria-oriental-grupo2
    ```
 
 2. Commits visibles:

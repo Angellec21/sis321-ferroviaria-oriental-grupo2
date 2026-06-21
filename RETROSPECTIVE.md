@@ -1,8 +1,8 @@
 # 📋 Retrospectiva Sprint - Formato Start/Stop/Continue
 
 **Sprint:** Actividad 5 - Sprint Técnico (Autenticación y Gestión de Usuarios)  
-**Duración:** [Completar fecha inicio/fin]  
-**Equipo:** [Nombres del grupo]  
+**Duración:** 19/06/2026 - 25/06/2026  
+**Equipo:** Grupo Dos (Angel Emanuel Le Caro Quispe)  
 
 ---
 
@@ -32,22 +32,14 @@ Implementar un sistema de autenticación seguro con JWT, roles y permisos para e
 
 ## 🚀 START (Comenzar a Hacer)
 
-**Cosas NUEVAS que debemos implementar en próximos sprints:**
+**Actualización:** los 3 primeros puntos que planeamos para "el próximo sprint" ya se
+implementaron durante esta misma iteración extendida (no quedaron para después):
 
-- [ ] **Sistema de Reportes** 
-  - Query A: Análisis de ingresos por estación
-  - Query B: Ocupación de trenes
-  - Query C: Programación de mantenimiento
+- [x] **Sistema de Reportes** — Query A (ingresos), Query B (ocupación), Query C (mantenimiento)
+- [x] **Módulo de Ventas** — crear venta/reserva, validar disponibilidad de asientos, cancelar reserva
+- [x] **Módulo de Pagos** — QR, transferencia, ventanilla + Pasarela de Pagos pública simulada (compra sin registro)
 
-- [ ] **Módulo de Ventas**
-  - Crear venta / reserva
-  - Aplicar descuentos
-  - Validar disponibilidad de asientos
-
-- [ ] **Módulo de Pagos**
-  - Registrar pagos
-  - Validar métodos de pago
-  - Generar comprobantes
+**Lo que sí queda genuinamente pendiente:**
 
 - [ ] **Sincronización Offline**
   - Implementar service workers
@@ -63,6 +55,9 @@ Implementar un sistema de autenticación seguro con JWT, roles y permisos para e
   - Prometheus metrics
   - Grafana dashboards
   - Alertas automáticas
+
+- [ ] **Push del repositorio a GitHub**
+  - Repo local listo (`sis321-ferroviaria-oriental-grupo2`), falta crear el remoto y hacer push
 
 ---
 
@@ -259,20 +254,16 @@ try {
 
 ## 📝 Firma de Retrospectiva
 
-**Facilitador:** [Nombre]  
-**Fecha:** [DD/MM/YYYY]  
+**Facilitador:** Angel Emanuel Le Caro Quispe  
+**Fecha:** 25/06/2026  
 **Participantes:**
-- [ ] Backend Lead
-- [ ] Backend Dev 1
-- [ ] Backend Dev 2
-- [ ] QA
-- [ ] DevOps
+- [x] Grupo Dos
 
 ---
 
 ## 🔗 Links Útiles
 
-- [Repo GitHub](https://github.com/[usuario]/sis321-ferroviaria-[grupo])
+- [Repo GitHub](https://github.com/TU_USUARIO/sis321-ferroviaria-oriental-grupo2)
 - [Sprint Review](./SPRINT-REVIEW.md)
 - [Documentación Técnica](./README.md)
 - [Guía de Setup](./SETUP.md)
@@ -286,4 +277,4 @@ Mantengamos este nivel de calidad y documentación en los próximos.
 
 ---
 
-**Próximo Sprint:** Módulo de Reportes (Query A, B, C)
+**Próximo paso:** Push del repositorio a GitHub, Actividad 4, y testing automatizado
