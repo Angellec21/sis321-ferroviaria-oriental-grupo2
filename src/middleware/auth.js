@@ -4,6 +4,8 @@
 
 import jwt from 'jsonwebtoken';
 import pool, { getOne } from '../config/database.js';
+import { obtenerPermisosCache, guardarPermisosCache } from '../config/redis.js';
+import { cachePermisosHits } from '../config/metrics.js';
 
 /**
  * Middleware: Verificar JWT y cargar usuario
@@ -40,19 +42,29 @@ export const authenticateToken = async (req, res, next) => {
       });
     }
 
-    // Cargar permisos del usuario
-    const permisosRes = await getOne(
-      `SELECT ARRAY_AGG(p.nombre) as permisos
-       FROM dw.roles_permisos rp
-       JOIN dw.permisos p ON rp.id_permiso = p.id_permiso
-       WHERE rp.id_rol = $1`,
-      [usuario.id_rol]
-    );
+    // Cargar permisos: primero Redis (rapido), si no esta cacheado va a Postgres
+    let permisos = await obtenerPermisosCache(usuario.id_rol);
+    req.permisosDesdeCache = permisos !== null;
+
+    if (permisos === null) {
+      const permisosRes = await getOne(
+        `SELECT ARRAY_AGG(p.nombre) as permisos
+         FROM dw.roles_permisos rp
+         JOIN dw.permisos p ON rp.id_permiso = p.id_permiso
+         WHERE rp.id_rol = $1`,
+        [usuario.id_rol]
+      );
+      permisos = permisosRes?.permisos || [];
+      await guardarPermisosCache(usuario.id_rol, permisos);
+    }
+
+    res.set('X-Permisos-Cache', req.permisosDesdeCache ? 'HIT' : 'MISS');
+    cachePermisosHits.labels(req.permisosDesdeCache ? 'hit' : 'miss').inc();
 
     // Adjuntar usuario al request
     req.usuario = {
       ...usuario,
-      permisos: permisosRes?.permisos || []
+      permisos
     };
 
     next();

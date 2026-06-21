@@ -3,7 +3,7 @@
 // ============================================
 
 import express from 'express';
-import { authenticateToken, requireRole, requirePermission } from '../middleware/auth.js';
+import { requireRole, requirePermission } from '../middleware/auth.js';
 import { reglasCrearUsuario } from '../middleware/validators.js';
 import Usuario from '../models/Usuario.js';
 
@@ -16,7 +16,7 @@ const router = express.Router();
  * @query page, limit, id_rol, id_estacion, buscar
  * @returns { success, data, pagination }
  */
-router.get('/', authenticateToken, requirePermission(['usuarios:leer']), async (req, res) => {
+router.get('/', requirePermission(['usuarios:leer']), async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
@@ -50,7 +50,7 @@ router.get('/', authenticateToken, requirePermission(['usuarios:leer']), async (
  * @body { nombre, email, documento_identidad, password, id_rol, id_estacion? }
  * @returns { success, data }
  */
-router.post('/', authenticateToken, requireRole(['administrador']), reglasCrearUsuario, async (req, res) => {
+router.post('/', requireRole(['administrador']), reglasCrearUsuario, async (req, res) => {
   try {
     const { nombre, email, documento_identidad, password, id_rol, id_estacion = null } = req.body;
     // Formato y presencia de campos ya validados por express-validator (reglasCrearUsuario)
@@ -76,7 +76,7 @@ router.post('/', authenticateToken, requireRole(['administrador']), reglasCrearU
  * @param id - ID del usuario
  * @returns { success, data }
  */
-router.get('/:id', authenticateToken, requirePermission(['usuarios:leer']), async (req, res) => {
+router.get('/:id', requirePermission(['usuarios:leer']), async (req, res) => {
   try {
     const usuario = await Usuario.porId(parseInt(req.params.id));
 
@@ -110,7 +110,7 @@ router.get('/:id', authenticateToken, requirePermission(['usuarios:leer']), asyn
  * @body { nombre?, documento_identidad?, id_rol?, id_estacion?, estado? }
  * @returns { success, data }
  */
-router.put('/:id', authenticateToken, requirePermission(['usuarios:editar']), async (req, res) => {
+router.put('/:id', requirePermission(['usuarios:editar']), async (req, res) => {
   try {
     const idUsuario = parseInt(req.params.id);
 
@@ -149,8 +149,7 @@ router.put('/:id', authenticateToken, requirePermission(['usuarios:editar']), as
  * @body { nueva_password }
  * @returns { success, message }
  */
-router.post('/:id/resetear-password', 
-  authenticateToken, 
+router.post('/:id/resetear-password',
   requireRole(['administrador']),
   async (req, res) => {
     try {
@@ -189,7 +188,7 @@ router.post('/:id/resetear-password',
  * @body { password_actual, password_nueva }
  * @returns { success, message }
  */
-router.post('/cambiar-password', authenticateToken, async (req, res) => {
+router.post('/cambiar-password', async (req, res) => {
   try {
     const { password_actual, password_nueva } = req.body;
     const idUsuario = req.usuario.id_usuario;
@@ -242,7 +241,7 @@ router.post('/cambiar-password', authenticateToken, async (req, res) => {
  * @param id - ID del usuario
  * @returns { success, message }
  */
-router.delete('/:id', authenticateToken, requireRole(['administrador']), async (req, res) => {
+router.delete('/:id', requireRole(['administrador']), async (req, res) => {
   try {
     const idUsuario = parseInt(req.params.id);
 
