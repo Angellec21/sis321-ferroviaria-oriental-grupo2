@@ -8,6 +8,18 @@ Sistema de Apoyo a la Toma de Decisiones (DSS) - Módulo de Autenticación y Ges
 - PostgreSQL 16
 - JWT (JSON Web Tokens)
 - bcrypt (Hash de contraseñas)
+- express-validator (Validación de entradas)
+
+> **Nota sobre la elección de stack:** la consigna de la Actividad 5 ofrece 3 combinaciones
+> predefinidas (PHP/Laravel+MySQL, Python/Django+PostgreSQL, Node/Express+MySQL). Este proyecto
+> usa **Node.js/Express + PostgreSQL**, una variante híbrida entre la opción B y C, justificada
+> porque el modelo de datos (Actividad 3) ya estaba diseñado y probado sobre PostgreSQL.
+
+> **Nota sobre datos de prueba:** `database/seed.js` contiene usuarios escritos a mano.
+> `database/mockaroo-usuarios.csv` + `database/import-mockaroo.js` agregan un set adicional con el
+> mismo formato que exporta [mockaroo.com](https://mockaroo.com) — el CSV se construyó manualmente
+> replicando esa estructura (nombres en español, datos de Bolivia) porque no se dispuso de una
+> cuenta en esa plataforma durante el desarrollo.
 
 ---
 

@@ -12,7 +12,7 @@
 
 **Nombre del repositorio:**
 ```
-sis321-ferroviaria-grupo1
+sis321-ferroviaria-oriental-grupo2
 ```
 (Cambiar `grupo1` por tu grupo real)
 
@@ -76,8 +76,8 @@ cat ~/.ssh/id_ed25519.pub
 ### Opción A: Si es NUEVO (Desde GitHub)
 
 ```bash
-git clone https://github.com/TU_USUARIO/sis321-ferroviaria-grupo1.git
-cd sis321-ferroviaria-grupo1
+git clone https://github.com/TU_USUARIO/sis321-ferroviaria-oriental-grupo2.git
+cd sis321-ferroviaria-oriental-grupo2
 ```
 
 ### Opción B: Si YA existe localmente
@@ -86,10 +86,10 @@ cd sis321-ferroviaria-grupo1
 cd dss-ferroviaria-backend
 
 # Añadir remoto
-git remote add origin https://github.com/TU_USUARIO/sis321-ferroviaria-grupo1.git
+git remote add origin https://github.com/TU_USUARIO/sis321-ferroviaria-oriental-grupo2.git
 
 # O si usas SSH
-git remote add origin git@github.com:TU_USUARIO/sis321-ferroviaria-grupo1.git
+git remote add origin git@github.com:TU_USUARIO/sis321-ferroviaria-oriental-grupo2.git
 
 # Verificar
 git remote -v
@@ -353,8 +353,8 @@ build/
 
 ```bash
 # 1. Clonar repo
-git clone https://github.com/mi-usuario/sis321-ferroviaria.git
-cd sis321-ferroviaria
+git clone https://github.com/TU_USUARIO/sis321-ferroviaria-oriental-grupo2.git
+cd sis321-ferroviaria-oriental-grupo2
 
 # 2. Crear rama
 git checkout -b feat/login-module
@@ -384,7 +384,7 @@ git pull origin main
 
 ## 🎯 Actividad 5 - Pasos de GitHub
 
-1. **Crear repositorio** con nombre `sis321-ferroviaria-[grupo]`
+1. **Crear repositorio** con nombre `sis321-ferroviaria-oriental-grupo2`
 2. **Clonar** en tu máquina
 3. **Copiar** archivos de backend aquí
 4. **Primer commit:** `feat: inicializar backend Node.js + Express + PostgreSQL`
