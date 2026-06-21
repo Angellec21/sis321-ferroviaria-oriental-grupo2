@@ -3,7 +3,9 @@
 // ============================================
 
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import Usuario from '../models/Usuario.js';
+import { loginsTotal } from '../config/metrics.js';
 import { query } from '../config/database.js';
 
 /**
@@ -92,6 +94,7 @@ export const login = async (req, res) => {
         [req.ip, JSON.stringify({ email, razon: 'usuario_no_existe' })]
       );
 
+      loginsTotal.labels('fallido').inc();
       return res.status(401).json({
         success: false,
         message: 'Email o contraseña incorrectos',
@@ -131,6 +134,7 @@ export const login = async (req, res) => {
         [usuario.id_usuario, req.ip, JSON.stringify({ intentos })]
       );
 
+      loginsTotal.labels('fallido').inc();
       return res.status(401).json({
         success: false,
         message: 'Email o contraseña incorrectos',
@@ -160,7 +164,8 @@ export const login = async (req, res) => {
     const refreshToken = jwt.sign(
       {
         id_usuario: usuario.id_usuario,
-        email: usuario.email
+        email: usuario.email,
+        jti: crypto.randomUUID() // garantiza unicidad aunque dos logins ocurran en el mismo segundo
       },
       process.env.REFRESH_TOKEN_SECRET,
       { expiresIn: process.env.REFRESH_TOKEN_EXPIRATION || '7d' }
@@ -183,6 +188,7 @@ export const login = async (req, res) => {
       [usuario.id_usuario, req.ip]
     );
 
+    loginsTotal.labels('exitoso').inc();
     res.status(200).json({
       success: true,
       message: 'Login exitoso',
