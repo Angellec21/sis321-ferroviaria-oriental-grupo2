@@ -4,6 +4,7 @@
 
 import express from 'express';
 import * as reportesController from '../controllers/reportesController.js';
+import * as iaController from '../controllers/iaController.js';
 import { requirePermission } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -28,5 +29,12 @@ router.get('/ocupacion', requirePermission(['reportes:ocupacion']), reportesCont
  * @auth required (reportes:mantenimiento)
  */
 router.get('/mantenimiento', requirePermission(['reportes:mantenimiento']), reportesController.mantenimientoProximo);
+
+/**
+ * GET /api/reportes/prediccion-demanda?id_ruta=&fecha=
+ * @description Modelo Predictivo de Demanda (Servidor de IA / TensorFlow)
+ * @auth required (reportes:ocupacion)
+ */
+router.get('/prediccion-demanda', requirePermission(['reportes:ocupacion']), iaController.predecirDemanda);
 
 export default router;

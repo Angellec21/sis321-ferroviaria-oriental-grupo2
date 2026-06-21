@@ -50,7 +50,40 @@ IndexedDB las ventas/pagos hechos sin conexión, sincronizándolos con la
 Background Sync API cuando vuelve la red (mismo concepto de
 `cola_sincronizacion` de la Actividad 3).
 
-## Pendiente (fuera de este sprint)
+## Servidor de IA (Python/TensorFlow) — Modelo Predictivo de Demanda
 
-- **App móvil (React Native)** — requiere stack de desarrollo móvil aparte
-- **Servidor de IA (Python/TensorFlow)** — requiere datos históricos reales y entrenamiento de modelo
+Proyecto separado: `../dss-ferroviaria-ia/`.
+
+- `generar_dataset.py`: genera 180 días de histórico sintético de ocupación por ruta
+  (tendencia + estacionalidad semanal + ruido) e inserta en `dw.metrica_ocupacion`
+- `entrenar_modelo.py`: entrena una red neuronal (Keras/TensorFlow) que predice la
+  tasa de ocupación dado `id_ruta` + `dia_semana` + `dias_desde_inicio` (tendencia).
+  MAE de validación ≈ 5 puntos porcentuales
+- `servidor_ia.py`: expone el modelo entrenado vía FastAPI (`uvicorn servidor_ia:app --port 8500`)
+  - **Nota de protocolo:** el diagrama especifica gRPC; aquí se usa REST por simplicidad.
+    El cliente Node (`src/controllers/iaController.js`) llama por HTTP.
+
+Levantar:
+```bash
+cd dss-ferroviaria-ia && source venv/bin/activate
+uvicorn servidor_ia:app --port 8500
+```
+
+Probar: `GET /api/reportes/prediccion-demanda?id_ruta=1&fecha=2026-07-18` (vía el backend Node,
+requiere JWT) — también visible en el frontend, página "Reportes → Ocupación".
+
+## App Móvil (React Native / Expo)
+
+Proyecto separado: `../dss-ferroviaria-mobile/`. Pantallas: Login, Lista de Viajes,
+Asientos disponibles — consume la misma API REST del backend.
+
+**Limitación real:** esta máquina no tiene Xcode con simulador iOS ni Android SDK
+instalados, así que se corrió y verificó en **modo web** (`react-native-web`), que
+ejecuta el mismo código JS que correría en un teléfono real. Para correrlo en un
+dispositivo/emulador real haría falta instalar Xcode (iOS) o Android Studio (Android).
+
+Levantar:
+```bash
+cd dss-ferroviaria-mobile
+npx expo start --web --port 19006
+```
