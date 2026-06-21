@@ -18,6 +18,7 @@ import ventasRoutes from './routes/ventasRoutes.js';
 import pagosRoutes from './routes/pagosRoutes.js';
 import publicoRoutes from './routes/publicoRoutes.js';
 import { authenticateToken } from './middleware/auth.js';
+import registroMetricas, { httpRequestDuration, httpRequestsTotal } from './config/metrics.js';
 
 // Cargar variables de entorno
 dotenv.config();
@@ -48,6 +49,9 @@ app.use((req, res, next) => {
   const start = Date.now();
   res.on('finish', () => {
     const duration = Date.now() - start;
+    const ruta = req.route?.path ? `${req.baseUrl}${req.route.path}` : req.path;
+    httpRequestDuration.labels(req.method, ruta, res.statusCode).observe(duration / 1000);
+    httpRequestsTotal.labels(req.method, ruta, res.statusCode).inc();
     console.log(`[${new Date().toISOString()}] ${req.method} ${req.path} - ${res.statusCode} (${duration}ms)`);
   });
   next();
@@ -65,6 +69,12 @@ app.get('/health', (req, res) => {
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV
   });
+});
+
+// Métricas para Prometheus
+app.get('/metrics', async (req, res) => {
+  res.set('Content-Type', registroMetricas.contentType);
+  res.end(await registroMetricas.metrics());
 });
 
 // API Documentation
