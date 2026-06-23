@@ -42,6 +42,8 @@ cd ../mobile && npm install && npx expo start --web --port 19006
 
 ## Documentación por módulo
 
+- [`STACK_TECNOLOGICO.md`](STACK_TECNOLOGICO.md) — **detalle completo de cada framework/librería usado en todo el sistema**
+- [`backend/USUARIOS.md`](backend/USUARIOS.md) — credenciales de los 22 usuarios de prueba
 - [`backend/README.md`](backend/README.md) — API, auth JWT, roles, setup completo
 - [`backend/infra/README.md`](backend/infra/README.md) — Nginx, Redis, Prometheus/Grafana, Servidor de IA, app móvil
 - [`backend/SPRINT-REVIEW.md`](backend/SPRINT-REVIEW.md) — guion de demo (Actividad 5)
