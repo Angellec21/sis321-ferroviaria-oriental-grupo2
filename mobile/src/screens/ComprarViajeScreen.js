@@ -5,12 +5,24 @@ import api from '../api/client';
 export default function ComprarViajeScreen({ navigation }) {
   const [viajes, setViajes] = useState([]);
   const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState('');
 
-  useEffect(() => {
+  const cargar = () => {
+    setCargando(true);
+    setError('');
     api.get('/public/viajes')
       .then((r) => setViajes(r.data.data))
+      .catch((err) => {
+        setError(
+          err.message === 'Network Error'
+            ? 'No se pudo conectar con el servidor. Verifica tu conexión.'
+            : err.response?.data?.message || 'Error al cargar los viajes.'
+        );
+      })
       .finally(() => setCargando(false));
-  }, []);
+  };
+
+  useEffect(() => { cargar(); }, []);
 
   return (
     <View style={styles.container}>
@@ -18,7 +30,14 @@ export default function ComprarViajeScreen({ navigation }) {
       <Text style={styles.titulo}>Elige tu viaje</Text>
       <Text style={styles.ayuda}>No necesitas crear una cuenta para comprar.</Text>
 
-      {cargando ? (
+      {error ? (
+        <View style={styles.errorBox}>
+          <Text style={styles.errorTexto}>{error}</Text>
+          <TouchableOpacity style={styles.botonReintentar} onPress={cargar}>
+            <Text style={styles.botonReintentarTexto}>Reintentar</Text>
+          </TouchableOpacity>
+        </View>
+      ) : cargando ? (
         <ActivityIndicator color="#e8742c" style={{ marginTop: 20 }} />
       ) : (
         <FlatList
@@ -35,6 +54,7 @@ export default function ComprarViajeScreen({ navigation }) {
               <Text style={styles.detalle}>{new Date(item.fecha_salida).toLocaleString('es-BO')}</Text>
             </TouchableOpacity>
           )}
+          ListEmptyComponent={<Text style={styles.vacio}>No hay viajes disponibles en este momento.</Text>}
         />
       )}
     </View>
@@ -51,5 +71,10 @@ const styles = StyleSheet.create({
     borderRadius: 10, padding: 14, marginBottom: 10
   },
   ruta: { color: '#f1e9df', fontWeight: '700', fontSize: 15 },
-  detalle: { color: '#b8a890', fontSize: 13, marginTop: 2 }
+  detalle: { color: '#b8a890', fontSize: 13, marginTop: 2 },
+  vacio: { color: '#6b5d49', textAlign: 'center', marginTop: 20 },
+  errorBox: { marginTop: 20, alignItems: 'center' },
+  errorTexto: { color: '#ff8a8a', textAlign: 'center', marginBottom: 12 },
+  botonReintentar: { backgroundColor: '#e8742c', borderRadius: 8, paddingVertical: 10, paddingHorizontal: 20 },
+  botonReintentarTexto: { color: '#1a1410', fontWeight: '700' }
 });
