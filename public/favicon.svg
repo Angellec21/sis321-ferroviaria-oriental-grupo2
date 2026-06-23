@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400">
+  <defs>
+    <path id="arcTop" d="M 75,200 A 125,125 0 0 1 325,200" />
+    <path id="arcBottom" d="M 325,210 A 125,125 0 0 1 75,210" />
+  </defs>
+
+  <!-- circulo exterior -->
+  <circle cx="200" cy="200" r="188" fill="#0d0d0d" />
+  <circle cx="200" cy="200" r="178" fill="#E8742C" stroke="#0d0d0d" stroke-width="6" />
+  <circle cx="200" cy="200" r="168" fill="none" stroke="#0d0d0d" stroke-width="2.5" />
+
+  <!-- texto curvo -->
+  <text font-family="Arial, sans-serif" font-weight="700" font-size="30" letter-spacing="2" fill="#0d0d0d">
+    <textPath href="#arcTop" startOffset="50%" text-anchor="middle">FERROVIARIA</textPath>
+  </text>
+  <text font-family="Arial, sans-serif" font-weight="700" font-size="30" letter-spacing="6" fill="#0d0d0d">
+    <textPath href="#arcBottom" startOffset="50%" text-anchor="middle">ORIENTAL</textPath>
+  </text>
+
+  <!-- flecha izquierda (amarilla) -->
+  <path d="M 25,200 L 168,118 L 168,168 L 235,168 L 235,232 L 168,232 L 168,282 Z"
+        fill="#F5E03C" stroke="#0d0d0d" stroke-width="7" stroke-linejoin="round" />
+
+  <!-- flecha derecha (amarilla) -->
+  <path d="M 375,200 L 232,118 L 232,168 L 165,168 L 165,232 L 232,232 L 232,282 Z"
+        fill="#F5E03C" stroke="#0d0d0d" stroke-width="7" stroke-linejoin="round" />
+
+  <!-- letra F en la flecha izquierda -->
+  <rect x="68" y="160" width="26" height="80" fill="#0d0d0d" />
+  <rect x="68" y="160" width="55" height="22" fill="#0d0d0d" />
+  <rect x="68" y="190" width="45" height="20" fill="#0d0d0d" />
+
+  <!-- icono circulo partido en la flecha derecha -->
+  <circle cx="320" cy="200" r="34" fill="#0d0d0d" />
+  <rect x="317" y="166" width="6" height="68" fill="#F5E03C" />
+
+  <!-- silueta sudamerica (centro) -->
+  <path d="M205,95
+           C233,99 246,113 243,131
+           C264,140 262,163 246,172
+           C260,186 254,205 236,210
+           C245,229 236,243 219,244
+           C224,263 215,277 203,278
+           C209,297 198,311 193,311
+           C198,325 189,337 184,337
+           C187,320 178,306 181,290
+           C170,283 172,264 182,255
+           C169,248 172,229 184,223
+           C172,214 177,196 190,191
+           C179,180 184,162 197,157
+           C188,148 193,129 206,124
+           C195,115 194,103 205,95 Z"
+        fill="#0d0d0d" />
+
+  <!-- anillo interior decorativo -->
+  <circle cx="200" cy="200" r="178" fill="none" stroke="#0d0d0d" stroke-width="1.5" opacity="0.4" />
+</svg>
