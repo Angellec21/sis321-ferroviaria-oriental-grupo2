@@ -1,0 +1,16 @@
+{
+  "name": "DSS Ferroviaria Oriental",
+  "short_name": "DSS Ferroviaria",
+  "description": "Sistema de Apoyo a la Toma de Decisiones - Ferroviaria Oriental S.A.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#15110d",
+  "theme_color": "#e8742c",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
