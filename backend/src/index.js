@@ -33,9 +33,13 @@ const PORT = process.env.PORT || 3000;
 // MIDDLEWARES DE SEGURIDAD
 // ============================================
 app.use(helmet()); // Seguridad HTTP headers
+const corsOrigin = !process.env.CORS_ORIGIN || process.env.CORS_ORIGIN === '*'
+  ? '*'
+  : process.env.CORS_ORIGIN.split(',').map(o => o.trim());
+
 app.use(cors({
-  origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : '*',
-  credentials: true
+  origin: corsOrigin,
+  credentials: corsOrigin !== '*'
 })); // CORS
 
 // ============================================
