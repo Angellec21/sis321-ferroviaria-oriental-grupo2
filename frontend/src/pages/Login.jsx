@@ -5,7 +5,7 @@ import logo from '../assets/logo-ferroviaria.svg';
 import './Login.css';
 
 export default function Login() {
-  const [email, setEmail] = useState('admin@ferroviariaoriental.com.bo');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [cargando, setCargando] = useState(false);
@@ -58,8 +58,6 @@ export default function Login() {
         <button className="primario" type="submit" disabled={cargando}>
           {cargando ? 'Ingresando...' : 'Ingresar'}
         </button>
-
-        <p className="ayuda">Admin: admin@ferroviariaoriental.com.bo / admin123</p>
 
         <Link to="/comprar" style={{ fontSize: '0.85rem', textAlign: 'center' }}>
           ¿Quieres comprar un pasaje? Compra aquí sin crear cuenta →

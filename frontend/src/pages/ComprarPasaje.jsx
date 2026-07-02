@@ -8,17 +8,6 @@ import '../components/PublicHeader.css';
 const PASOS = ['viaje', 'pasajeros', 'pago', 'confirmacion'];
 const ETIQUETAS = { viaje: '1. Viaje', pasajeros: '2. Pasajeros', pago: '3. Pago', confirmacion: '4. Listo' };
 
-function patronQr(semilla) {
-  const celdas = [];
-  let hash = 0;
-  for (let i = 0; i < semilla.length; i++) hash = (hash * 31 + semilla.charCodeAt(i)) % 100000;
-  for (let i = 0; i < 64; i++) {
-    hash = (hash * 1103515245 + 12345) % 2147483648;
-    celdas.push(hash % 3 !== 0);
-  }
-  return celdas;
-}
-
 export default function ComprarPasaje() {
   const [paso, setPaso] = useState('viaje');
   const [error, setError] = useState('');
@@ -26,8 +15,10 @@ export default function ComprarPasaje() {
 
   const [viajes, setViajes] = useState([]);
   const [idViaje, setIdViaje] = useState('');
+  const [viajeSeleccionado, setViajeSeleccionado] = useState(null);
 
   const [asientos, setAsientos] = useState([]);
+  const [asientoElegido, setAsientoElegido] = useState('');
   const [seleccionados, setSeleccionados] = useState([]);
   const [nombrePasajero, setNombrePasajero] = useState('');
   const [documentoPasajero, setDocumentoPasajero] = useState('');
@@ -41,6 +32,13 @@ export default function ComprarPasaje() {
     api.get('/public/viajes').then((r) => setViajes(r.data.data)).catch(() => {});
   }, []);
 
+  const asientosOcupados = asientos.filter(a =>
+    a.estado === 'ocupado' || seleccionados.some(s => s.id_asiento === a.id_asiento)
+  );
+  const asientosLibres = asientos.filter(a =>
+    a.estado !== 'ocupado' && !seleccionados.some(s => s.id_asiento === a.id_asiento)
+  );
+
   const elegirViaje = async () => {
     if (!idViaje) return;
     setError('');
@@ -49,6 +47,9 @@ export default function ComprarPasaje() {
       const { data } = await api.get(`/public/viajes/${idViaje}/asientos`);
       setAsientos(data.data);
       setSeleccionados([]);
+      setAsientoElegido('');
+      const viaje = viajes.find(v => String(v.id_viaje) === String(idViaje));
+      setViajeSeleccionado(viaje || null);
       setPaso('pasajeros');
     } catch {
       setError('No se pudieron cargar los asientos de este viaje');
@@ -62,19 +63,22 @@ export default function ComprarPasaje() {
       setError('Ingresa nombre y documento del pasajero');
       return;
     }
-    const asientoLibre = asientos.find((a) => !seleccionados.some((s) => s.id_asiento === a.id_asiento));
-    if (!asientoLibre) {
-      setError('No hay más asientos disponibles en este viaje');
+    if (!asientoElegido) {
+      setError('Seleccioná un asiento disponible');
       return;
     }
+    const asiento = asientos.find(a => String(a.id_asiento) === String(asientoElegido));
+    if (!asiento) return;
+
     setSeleccionados([...seleccionados, {
-      id_asiento: asientoLibre.id_asiento,
-      codigo_asiento: asientoLibre.codigo_asiento,
+      id_asiento: asiento.id_asiento,
+      codigo_asiento: asiento.codigo_asiento,
       nombre_pasajero: nombrePasajero,
       documento_pasajero: documentoPasajero
     }]);
     setNombrePasajero('');
     setDocumentoPasajero('');
+    setAsientoElegido('');
     setError('');
   };
 
@@ -91,6 +95,7 @@ export default function ComprarPasaje() {
         pasajeros: seleccionados
       });
       setCompra(data.data.venta);
+      setMetodoPago(null);
       setPaso('pago');
     } catch (err) {
       setError(err.response?.data?.message || 'No se pudo registrar la compra. Intenta de nuevo.');
@@ -103,7 +108,7 @@ export default function ComprarPasaje() {
     setError('');
     setProcesandoPago(true);
     try {
-      await new Promise((r) => setTimeout(r, 1400)); // simula tiempo de la pasarela externa
+      await new Promise((r) => setTimeout(r, 1400));
       await api.post('/public/pagos', { id_venta: compra.id_venta, tipo_pago: metodoPago });
       const { data } = await api.get(`/public/compras/${compra.codigo_venta}`);
       setTicket(data.data);
@@ -120,6 +125,7 @@ export default function ComprarPasaje() {
     setIdViaje('');
     setAsientos([]);
     setSeleccionados([]);
+    setAsientoElegido('');
     setCompra(null);
     setMetodoPago(null);
     setTicket(null);
@@ -138,6 +144,7 @@ export default function ComprarPasaje() {
 
         {error && <div className="error-msg">{error}</div>}
 
+        {/* ── PASO 1: Elegir viaje ── */}
         {paso === 'viaje' && (
           <div className="tarjeta-form">
             <h3>Elige tu viaje</h3>
@@ -146,40 +153,112 @@ export default function ComprarPasaje() {
             </p>
             <div className="filtros">
               <label style={{ flex: '2 1 280px' }}>
-                Viaje
+                Viaje disponible
                 <select value={idViaje} onChange={(e) => setIdViaje(e.target.value)}>
                   <option value="">Seleccionar...</option>
                   {viajes.map((v) => (
                     <option key={v.id_viaje} value={v.id_viaje}>
-                      {v.ruta} — {new Date(v.fecha_salida).toLocaleString('es-BO')} ({v.codigo_tren})
+                      {v.ciudad_origen} → {v.ciudad_destino} | {new Date(v.fecha_salida).toLocaleDateString('es-BO', { day:'2-digit', month:'short', year:'numeric' })} {new Date(v.fecha_salida).toLocaleTimeString('es-BO', { hour:'2-digit', minute:'2-digit' })} | Bs {Number(v.tarifa_adulto).toFixed(0)} p/persona
                     </option>
                   ))}
                 </select>
               </label>
               <button className="primario" onClick={elegirViaje} disabled={!idViaje || cargando}>
-                {cargando ? 'Cargando...' : 'Continuar'}
+                {cargando ? 'Cargando...' : 'Ver asientos'}
               </button>
             </div>
           </div>
         )}
 
+        {/* ── PASO 2: Pasajeros y asientos ── */}
         {paso === 'pasajeros' && (
           <div className="tarjeta-form">
-            <h3>Pasajeros — {asientos.length - seleccionados.length} asiento(s) disponibles</h3>
-            <div className="filtros">
+            <h3>Selección de asientos</h3>
+            {viajeSeleccionado && (
+              <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: 8, padding: '0.75rem 1rem', marginBottom: '1rem', fontSize: '0.88rem', color: '#b8a890' }}>
+                <strong style={{ color: 'var(--amarillo)' }}>{viajeSeleccionado.ciudad_origen} → {viajeSeleccionado.ciudad_destino}</strong>
+                &nbsp;·&nbsp;{viajeSeleccionado.ruta}
+                &nbsp;·&nbsp;{Number(viajeSeleccionado.distancia_km).toFixed(0)} km
+                &nbsp;·&nbsp;~{Math.floor(viajeSeleccionado.duracion_estimada_minutos / 60)}h {viajeSeleccionado.duracion_estimada_minutos % 60}min
+                <br />
+                Tarifa: <strong style={{ color: '#2ecc71' }}>Bs {Number(viajeSeleccionado.tarifa_adulto).toFixed(0)} adulto</strong>
+                &nbsp;/&nbsp;Bs {Number(viajeSeleccionado.tarifa_niño).toFixed(0)} niño
+                &nbsp;/&nbsp;Bs {Number(viajeSeleccionado.tarifa_senior).toFixed(0)} senior
+                {seleccionados.length > 0 && (
+                  <span style={{ float: 'right', color: 'var(--amarillo)', fontWeight: 700 }}>
+                    Total estimado: Bs {(Number(viajeSeleccionado.tarifa_adulto) * seleccionados.length).toFixed(0)}
+                  </span>
+                )}
+              </div>
+            )}
+
+            {/* Mapa visual de asientos */}
+            <div style={{ marginBottom: '1.2rem' }}>
+              <p style={{ color: '#b8a890', fontSize: '0.85rem', marginBottom: '0.5rem' }}>
+                <span style={{ display: 'inline-block', width: 14, height: 14, background: '#2ecc71', borderRadius: 3, marginRight: 6, verticalAlign: 'middle' }} />Disponible
+                <span style={{ display: 'inline-block', width: 14, height: 14, background: '#e74c3c', borderRadius: 3, margin: '0 6px 0 16px', verticalAlign: 'middle' }} />Ocupado
+                <span style={{ display: 'inline-block', width: 14, height: 14, background: 'var(--amarillo)', borderRadius: 3, margin: '0 6px 0 16px', verticalAlign: 'middle' }} />Tu selección
+              </p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+                {asientos.map((a) => {
+                  const yaElegido = seleccionados.some(s => s.id_asiento === a.id_asiento);
+                  const ocupado = a.estado === 'ocupado';
+                  let bg = '#2ecc71';
+                  if (yaElegido) bg = 'var(--amarillo)';
+                  if (ocupado) bg = '#e74c3c';
+                  return (
+                    <div
+                      key={a.id_asiento}
+                      title={ocupado ? 'Ocupado' : yaElegido ? 'Ya seleccionado' : 'Disponible'}
+                      style={{
+                        background: bg,
+                        color: '#1a1a1a',
+                        fontWeight: 600,
+                        fontSize: '0.75rem',
+                        padding: '0.3rem 0.5rem',
+                        borderRadius: 4,
+                        cursor: ocupado || yaElegido ? 'not-allowed' : 'pointer',
+                        opacity: ocupado ? 0.5 : 1,
+                        minWidth: 42,
+                        textAlign: 'center'
+                      }}
+                      onClick={() => {
+                        if (!ocupado && !yaElegido) setAsientoElegido(String(a.id_asiento));
+                      }}
+                    >
+                      {a.codigo_asiento}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Formulario agregar pasajero */}
+            <div className="filtros" style={{ alignItems: 'flex-end' }}>
+              <label>
+                Asiento elegido
+                <select value={asientoElegido} onChange={(e) => setAsientoElegido(e.target.value)}>
+                  <option value="">-- Haz clic en un asiento verde --</option>
+                  {asientosLibres.map((a) => (
+                    <option key={a.id_asiento} value={a.id_asiento}>{a.codigo_asiento}</option>
+                  ))}
+                </select>
+              </label>
               <label>
                 Nombre completo
-                <input value={nombrePasajero} onChange={(e) => setNombrePasajero(e.target.value)} />
+                <input value={nombrePasajero} onChange={(e) => setNombrePasajero(e.target.value)} placeholder="Ej: Juan Pérez" />
               </label>
               <label>
                 Documento de identidad
-                <input value={documentoPasajero} onChange={(e) => setDocumentoPasajero(e.target.value)} />
+                <input value={documentoPasajero} onChange={(e) => setDocumentoPasajero(e.target.value)} placeholder="Ej: 12345678" />
               </label>
-              <button className="primario" onClick={agregarPasajero}>+ Agregar</button>
+              <button className="primario" onClick={agregarPasajero} disabled={!asientoElegido}>
+                + Agregar
+              </button>
             </div>
 
             {seleccionados.length === 0 ? (
-              <EstadoVacio icono="🪪" mensaje="Agrega al menos un pasajero para continuar." />
+              <EstadoVacio icono="💺" mensaje="Haz clic en un asiento verde y llena los datos del pasajero." />
             ) : (
               <div className="tabla-scroll">
                 <table>
@@ -198,17 +277,22 @@ export default function ComprarPasaje() {
               </div>
             )}
 
-            <button
-              className="primario"
-              style={{ marginTop: '1rem' }}
-              disabled={seleccionados.length === 0 || cargando}
-              onClick={continuarAPago}
-            >
-              {cargando ? 'Procesando...' : `Continuar al pago (${seleccionados.length} pasajero(s))`}
-            </button>
+            <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem' }}>
+              <button className="secundario" onClick={() => { setPaso('viaje'); setError(''); }}>
+                ← Volver
+              </button>
+              <button
+                className="primario"
+                disabled={seleccionados.length === 0 || cargando}
+                onClick={continuarAPago}
+              >
+                {cargando ? 'Procesando...' : `Continuar al pago (${seleccionados.length} pasajero(s))`}
+              </button>
+            </div>
           </div>
         )}
 
+        {/* ── PASO 3: Pago ── */}
         {paso === 'pago' && compra && (
           <div className="tarjeta-form">
             <h3>Pasarela de Pagos</h3>
@@ -231,21 +315,23 @@ export default function ComprarPasaje() {
 
             {metodoPago === 'qr' && (
               <div className="qr-box">
-                <div className="qr-pattern">
-                  {patronQr(compra.codigo_venta).map((on, i) => (
-                    <span key={i} className={on ? '' : 'off'} />
-                  ))}
-                </div>
-                <code>{compra.codigo_venta}</code>
-                <small>Escanea con tu app bancaria o billetera digital</small>
+                <img
+                  src="/qr-pago.png"
+                  alt="QR de pago - Banco Económico"
+                  style={{ width: 220, height: 220, objectFit: 'contain', borderRadius: 8 }}
+                />
+                <p style={{ margin: '0.5rem 0 0', color: '#b8a890', fontSize: '0.82rem' }}>
+                  Monto: <strong style={{ color: 'var(--amarillo)' }}>Bs {Number(compra.monto_total).toLocaleString('es-BO')}</strong>
+                </p>
+                <small>Escanea con tu app bancaria y pagá el monto exacto</small>
               </div>
             )}
 
             {metodoPago === 'transferencia' && (
               <div className="tarjeta" style={{ marginBottom: '1rem' }}>
-                <p><strong>Banco:</strong> Banco Ferroviario Oriental</p>
-                <p><strong>Cuenta:</strong> 4001-998877-01</p>
-                <p><strong>Titular:</strong> Ferroviaria Oriental S.A.</p>
+                <p><strong>Banco:</strong> Banco Económico</p>
+                <p><strong>Titular:</strong> Lecaro Quispe Angel Emanuel</p>
+                <p><strong>Cuenta:</strong> CA 1011027598</p>
                 <p><strong>Referencia:</strong> {compra.codigo_venta}</p>
               </div>
             )}
@@ -254,13 +340,23 @@ export default function ComprarPasaje() {
               <button className="primario" onClick={confirmarPago} disabled={procesandoPago}>
                 {procesandoPago
                   ? 'Procesando con la pasarela...'
-                  : metodoPago === 'qr' ? 'Ya escaneé, confirmar pago' : 'Ya transferí, confirmar pago'}
+                  : metodoPago === 'qr' ? 'Ya escaneé y pagué, confirmar' : 'Ya transferí, confirmar pago'}
               </button>
             )}
-            {procesandoPago && <Spinner texto="Conectando con la pasarela de pagos..." />}
+            {procesandoPago && <Spinner texto="Verificando pago..." />}
+
+            <button
+              className="secundario"
+              style={{ marginTop: '0.75rem' }}
+              onClick={() => { setPaso('pasajeros'); setError(''); }}
+              disabled={procesandoPago}
+            >
+              ← Volver
+            </button>
           </div>
         )}
 
+        {/* ── PASO 4: Confirmación ── */}
         {paso === 'confirmacion' && ticket && (
           <div className="ticket-card">
             <h3 style={{ marginTop: 0 }}>✅ Pago aprobado — {ticket.codigo_venta}</h3>

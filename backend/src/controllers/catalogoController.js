@@ -41,11 +41,17 @@ export const listarRutas = async (req, res) => {
 export const listarViajes = async (req, res) => {
   const resultado = await query(
     `SELECT v.id_viaje, v.codigo_viaje, v.fecha_salida, v.fecha_llegada_estimada,
-            v.estado_viaje, t.codigo_tren, rf.nombre AS ruta
+            v.estado_viaje, t.codigo_tren, rf.nombre AS ruta,
+            rf.distancia_km, rf.duracion_estimada_minutos,
+            rf.tarifa_adulto, rf.tarifa_niño, rf.tarifa_senior,
+            e_o.ciudad AS ciudad_origen, e_d.ciudad AS ciudad_destino
      FROM dw.viaje v
      JOIN dw.tren t ON v.id_tren = t.id_tren
      JOIN dw.ruta_ferroviaria rf ON v.id_ruta = rf.id_ruta
-     ORDER BY v.fecha_salida DESC`
+     JOIN dw.estacion e_o ON rf.estacion_origen = e_o.id_estacion
+     JOIN dw.estacion e_d ON rf.estacion_destino = e_d.id_estacion
+     WHERE v.estado_viaje NOT IN ('cancelado')
+     ORDER BY v.fecha_salida ASC`
   );
   res.json({ success: true, data: resultado.rows });
 };
@@ -63,14 +69,15 @@ export const asientosDisponiblesPorViaje = async (req, res) => {
   }
 
   const resultado = await query(
-    `SELECT a.id_asiento, a.codigo_asiento, w.id_wagon, w.tipo_wagon
+    `SELECT a.id_asiento, a.codigo_asiento, w.id_wagon, w.tipo_wagon,
+            CASE WHEN r.id_asiento IS NOT NULL THEN 'ocupado' ELSE 'disponible' END AS estado
      FROM dw.asiento a
      JOIN dw.wagon w ON a.id_wagon = w.id_wagon
+     LEFT JOIN (
+       SELECT DISTINCT id_asiento FROM dw.reserva
+       WHERE id_viaje = $2 AND estado_reserva IN ('activa', 'pagada')
+     ) r ON a.id_asiento = r.id_asiento
      WHERE w.id_tren = $1
-       AND a.id_asiento NOT IN (
-         SELECT r.id_asiento FROM dw.reserva r
-         WHERE r.id_viaje = $2 AND r.estado_reserva IN ('activa', 'pagada')
-       )
      ORDER BY w.id_wagon, a.codigo_asiento`,
     [viaje.rows[0].id_tren, id]
   );
