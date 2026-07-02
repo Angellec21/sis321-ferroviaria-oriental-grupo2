@@ -1,0 +1,64 @@
+databases:
+  - name: ferroviaria-db
+    databaseName: dss_ferroviaria
+    user: ferroviaria
+    plan: free
+    region: oregon
+
+services:
+  # ── Backend Node.js ─────────────────────────────────────────────────
+  - type: web
+    name: ferroviaria-backend
+    runtime: node
+    region: oregon
+    plan: free
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: node src/index.js
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: DATABASE_URL
+        fromDatabase:
+          name: ferroviaria-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          name: ferroviaria-redis
+          type: redis
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: REFRESH_TOKEN_SECRET
+        generateValue: true
+      - key: JWT_EXPIRATION
+        value: 24h
+      - key: REFRESH_TOKEN_EXPIRATION
+        value: 7d
+      - key: CORS_ORIGIN
+        value: https://ferroviaria-frontend.onrender.com
+      - key: APP_VERSION
+        value: 1.0.0
+
+  # ── Frontend React (Static Site) ────────────────────────────────────
+  - type: web
+    name: ferroviaria-frontend
+    runtime: static
+    region: oregon
+    plan: free
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_API_URL
+        value: https://ferroviaria-backend.onrender.com/api
+
+  # ── Redis ────────────────────────────────────────────────────────────
+  - type: redis
+    name: ferroviaria-redis
+    region: oregon
+    plan: free
+    maxmemoryPolicy: allkeys-lru

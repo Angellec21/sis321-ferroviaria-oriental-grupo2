@@ -5,12 +5,14 @@
 
 import Redis from 'ioredis';
 
-const redis = new Redis({
-  host: process.env.REDIS_HOST || 'localhost',
-  port: process.env.REDIS_PORT || 6379,
-  lazyConnect: false,
-  retryStrategy: (times) => Math.min(times * 200, 2000)
-});
+// En Render usa REDIS_URL. En local usa host/port individuales.
+const redis = new Redis(
+  process.env.REDIS_URL || {
+    host: process.env.REDIS_HOST || 'localhost',
+    port: process.env.REDIS_PORT || 6379
+  },
+  { lazyConnect: false, retryStrategy: (times) => Math.min(times * 200, 2000) }
+);
 
 redis.on('connect', () => console.log('[REDIS] Conectado'));
 redis.on('error', (err) => console.error('[REDIS] Error:', err.message));
