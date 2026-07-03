@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import api from '../api/client';
 import PublicHeader from '../components/PublicHeader';
 import Spinner from '../components/Spinner';
@@ -14,6 +14,8 @@ export default function ComprarPasaje() {
   const [cargando, setCargando] = useState(false);
 
   const [viajes, setViajes] = useState([]);
+  const [cargandoViajes, setCargandoViajes] = useState(true);
+  const [errorViajes, setErrorViajes] = useState('');
   const [idViaje, setIdViaje] = useState('');
   const [viajeSeleccionado, setViajeSeleccionado] = useState(null);
 
@@ -28,9 +30,22 @@ export default function ComprarPasaje() {
   const [procesandoPago, setProcesandoPago] = useState(false);
   const [ticket, setTicket] = useState(null);
 
-  useEffect(() => {
-    api.get('/public/viajes').then((r) => setViajes(r.data.data)).catch(() => {});
+  const cargarViajes = useCallback(async () => {
+    setCargandoViajes(true);
+    setErrorViajes('');
+    try {
+      const r = await api.get('/public/viajes');
+      setViajes(r.data.data || []);
+    } catch {
+      setErrorViajes('No se pudieron cargar los viajes. El servidor puede estar iniciando, intenta de nuevo en unos segundos.');
+    } finally {
+      setCargandoViajes(false);
+    }
   }, []);
+
+  useEffect(() => {
+    cargarViajes();
+  }, [cargarViajes]);
 
   const asientosOcupados = asientos.filter(a =>
     a.estado === 'ocupado' || seleccionados.some(s => s.id_asiento === a.id_asiento)
@@ -151,22 +166,43 @@ export default function ComprarPasaje() {
             <p style={{ color: '#b8a890', fontSize: '0.85rem' }}>
               No necesitas crear una cuenta. Elige tu viaje, tus asientos y paga directo.
             </p>
-            <div className="filtros">
-              <label style={{ flex: '2 1 280px' }}>
-                Viaje disponible
-                <select value={idViaje} onChange={(e) => setIdViaje(e.target.value)}>
-                  <option value="">Seleccionar...</option>
-                  {viajes.map((v) => (
-                    <option key={v.id_viaje} value={v.id_viaje}>
-                      {v.ciudad_origen} → {v.ciudad_destino} | {new Date(v.fecha_salida).toLocaleDateString('es-BO', { day:'2-digit', month:'short', year:'numeric' })} {new Date(v.fecha_salida).toLocaleTimeString('es-BO', { hour:'2-digit', minute:'2-digit' })} | Bs {Number(v.tarifa_adulto).toFixed(0)} p/persona
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <button className="primario" onClick={elegirViaje} disabled={!idViaje || cargando}>
-                {cargando ? 'Cargando...' : 'Ver asientos'}
-              </button>
-            </div>
+
+            {cargandoViajes && (
+              <div style={{ padding: '1.2rem 0', textAlign: 'center' }}>
+                <Spinner texto="Cargando viajes disponibles..." />
+                <p style={{ color: '#b8a890', fontSize: '0.8rem', marginTop: '0.5rem' }}>
+                  El servidor puede tardar unos segundos en despertar la primera vez.
+                </p>
+              </div>
+            )}
+
+            {!cargandoViajes && errorViajes && (
+              <div style={{ marginBottom: '1rem' }}>
+                <div className="error-msg">{errorViajes}</div>
+                <button className="secundario" onClick={cargarViajes} style={{ marginTop: '0.5rem' }}>
+                  🔄 Reintentar
+                </button>
+              </div>
+            )}
+
+            {!cargandoViajes && !errorViajes && (
+              <div className="filtros">
+                <label style={{ flex: '2 1 280px' }}>
+                  Viaje disponible
+                  <select value={idViaje} onChange={(e) => setIdViaje(e.target.value)}>
+                    <option value="">Seleccionar...</option>
+                    {viajes.map((v) => (
+                      <option key={v.id_viaje} value={v.id_viaje}>
+                        {v.ciudad_origen} → {v.ciudad_destino} | {new Date(v.fecha_salida).toLocaleDateString('es-BO', { day:'2-digit', month:'short', year:'numeric' })} {new Date(v.fecha_salida).toLocaleTimeString('es-BO', { hour:'2-digit', minute:'2-digit' })} | Bs {Number(v.tarifa_adulto).toFixed(0)} p/persona
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <button className="primario" onClick={elegirViaje} disabled={!idViaje || cargando}>
+                  {cargando ? 'Cargando...' : 'Ver asientos'}
+                </button>
+              </div>
+            )}
           </div>
         )}
 
