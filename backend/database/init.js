@@ -17,25 +17,34 @@ async function inicializarBD() {
   try {
     console.log('🔄 Inicializando base de datos...\n');
 
-    // Leer script SQL
-    const scriptPath = path.join(__dirname, '01-auth-schema.sql');
-    const script = fs.readFileSync(scriptPath, 'utf-8');
+    // Scripts en orden de dependencia:
+    // 00 = MER base (empresa, estacion, tren, wagon, viaje, usuario_venta)
+    // 01 = auth (roles, permisos, dw.usuarios) - depende de dw.estacion
+    // 02 = MER operacional (venta, reserva, pago, metricas) - depende de dw.usuarios
+    const scripts = fs.readdirSync(__dirname)
+      .filter(f => f.endsWith('.sql'))
+      .sort();
 
-    // Ejecutar script por bloques (separados por ;)
-    const bloques = script.split(';').filter(b => b.trim().length > 0);
+    for (const nombreArchivo of scripts) {
+      console.log(`\n📄 Ejecutando ${nombreArchivo}...\n`);
+      const scriptPath = path.join(__dirname, nombreArchivo);
+      const script = fs.readFileSync(scriptPath, 'utf-8');
 
-    for (let i = 0; i < bloques.length; i++) {
-      const bloque = bloques[i].trim();
-      if (bloque.length === 0) continue;
+      // Ejecutar script por bloques (separados por ;)
+      const bloques = script.split(';').filter(b => b.trim().length > 0);
 
-      try {
-        console.log(`[${i + 1}/${bloques.length}] Ejecutando bloque...`);
-        await cliente.query(bloque);
-      } catch (error) {
-        if (error.message.includes('already exists')) {
-          console.log(`[${i + 1}/${bloques.length}] ⚠️  Tabla ya existe, continuando...`);
-        } else {
-          throw error;
+      for (let i = 0; i < bloques.length; i++) {
+        const bloque = bloques[i].trim();
+        if (bloque.length === 0) continue;
+
+        try {
+          await cliente.query(bloque);
+        } catch (error) {
+          if (error.message.includes('already exists')) {
+            console.log(`[${i + 1}/${bloques.length}] ⚠️  Ya existe, continuando...`);
+          } else {
+            throw error;
+          }
         }
       }
     }
