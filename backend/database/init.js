@@ -18,9 +18,11 @@ async function inicializarBD() {
     console.log('🔄 Inicializando base de datos...\n');
 
     // Scripts en orden de dependencia:
-    // 00 = MER base (empresa, estacion, tren, wagon, viaje, usuario_venta)
+    // 00 = MER base (empresa, estacion, tren, wagon, viaje)
     // 01 = auth (roles, permisos, dw.usuarios) - depende de dw.estacion
     // 02 = MER operacional (venta, reserva, pago, metricas) - depende de dw.usuarios
+    // 03 = envío de carga - depende de dw.viaje, dw.wagon_carga, dw.roles
+    // 04 = corrige FKs legacy hacia usuario_venta y elimina esa tabla
     const scripts = fs.readdirSync(__dirname)
       .filter(f => f.endsWith('.sql'))
       .sort();

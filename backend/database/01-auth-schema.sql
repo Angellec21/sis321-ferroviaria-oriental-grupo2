@@ -119,12 +119,8 @@ WHERE r.nombre = 'operador'
 ON CONFLICT (id_rol, id_permiso) DO NOTHING;
 
 -- ============================================
--- 5. TABLA: usuarios (Extender la existente del MER)
+-- 5. TABLA: usuarios
 -- ============================================
--- Si la tabla usuario_venta ya existe, agregamos columnas de autenticación
--- Si no existe, la creamos completa
-
--- Crear tabla completa de usuarios si no existe
 CREATE TABLE IF NOT EXISTS dw.usuarios (
     id_usuario SERIAL PRIMARY KEY,
     nombre VARCHAR(150) NOT NULL,

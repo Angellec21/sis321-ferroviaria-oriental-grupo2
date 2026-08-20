@@ -13,7 +13,7 @@ const TIPOS_VALIDOS = ['qr', 'transferencia', 'ventanilla'];
  *   detalle_especifico según tipo_pago:
  *     qr            -> { codigo_qr?, billetera_digital?, transaccion_externa_id? }
  *     transferencia -> { banco_origen?, numero_cuenta_origen?, numero_referencia_transferencia?, banco_receptor? }
- *     ventanilla    -> { id_usuario_operador (FK a dw.usuario_venta), metodo_pago_local?, comprobante_numero? }
+ *     ventanilla    -> { id_usuario_operador (FK a dw.usuarios), metodo_pago_local?, comprobante_numero? }
  */
 export const crearPago = async (req, res) => {
   const { id_venta, id_reserva = null, monto, tipo_pago, detalle_especifico = {} } = req.body;
@@ -29,7 +29,7 @@ export const crearPago = async (req, res) => {
   if (tipo_pago === 'ventanilla' && !detalle_especifico.id_usuario_operador) {
     return res.status(400).json({
       success: false,
-      message: 'Pago en ventanilla requiere detalle_especifico.id_usuario_operador (FK a dw.usuario_venta)',
+      message: 'Pago en ventanilla requiere detalle_especifico.id_usuario_operador (FK a dw.usuarios)',
       code: 'MISSING_OPERATOR'
     });
   }

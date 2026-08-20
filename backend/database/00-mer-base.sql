@@ -282,27 +282,3 @@ SELECT * FROM (VALUES
 ON CONFLICT (codigo_viaje) DO NOTHING;
 
 -- ============================================
--- 3.2 TABLA: usuario_venta (mantenida solo para pago_ventanilla.id_usuario_operador)
--- ============================================
-CREATE TABLE IF NOT EXISTS dw.usuario_venta (
-    id_usuario SERIAL PRIMARY KEY,
-    nombre VARCHAR(150) NOT NULL,
-    email VARCHAR(150),
-    telefono VARCHAR(20),
-    documento_identidad VARCHAR(20) UNIQUE,
-    id_estacion INT NOT NULL,
-    tipo_usuario VARCHAR(50) DEFAULT 'operador_ventanilla',
-    estado BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (id_estacion) REFERENCES dw.estacion(id_estacion)
-);
-
-INSERT INTO dw.usuario_venta (nombre, email, id_estacion, tipo_usuario)
-SELECT * FROM (VALUES
-  ('Juan Perez', 'juan.perez@ferroviaria.com', 1, 'operador_ventanilla'),
-  ('Maria Garcia', 'maria.garcia@ferroviaria.com', 2, 'operador_ventanilla'),
-  ('Carlos Lopez', 'carlos.lopez@ferroviaria.com', 1, 'vendedor_qr')
-) AS v(nombre, email, id_estacion, tipo_usuario)
-ON CONFLICT (documento_identidad) DO NOTHING;
-
--- ============================================

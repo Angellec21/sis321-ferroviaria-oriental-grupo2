@@ -1,7 +1,6 @@
 -- 3.3 TABLA: venta
--- NOTA: id_usuario referencia dw.usuarios (auth), NO dw.usuario_venta,
--- porque ventasController.js / publicoController.js usan el id del
--- usuario autenticado (dw.usuarios) como vendedor de la venta.
+-- id_usuario referencia dw.usuarios (auth): ventasController.js /
+-- publicoController.js usan el id del usuario autenticado como vendedor.
 -- ============================================
 CREATE TABLE IF NOT EXISTS dw.venta (
     id_venta SERIAL PRIMARY KEY,
@@ -83,8 +82,6 @@ CREATE TABLE IF NOT EXISTS dw.pago_transferencia (
 
 -- ============================================
 -- 4.4 TABLA: pago_ventanilla
--- (id_usuario_operador sigue apuntando a dw.usuario_venta, tal como
--- documenta pagosController.js)
 -- ============================================
 CREATE TABLE IF NOT EXISTS dw.pago_ventanilla (
     id_pago INT PRIMARY KEY,
@@ -92,7 +89,7 @@ CREATE TABLE IF NOT EXISTS dw.pago_ventanilla (
     metodo_pago_local VARCHAR(50),
     comprobante_numero VARCHAR(50) UNIQUE,
     FOREIGN KEY (id_pago) REFERENCES dw.pago(id_pago) ON DELETE CASCADE,
-    FOREIGN KEY (id_usuario_operador) REFERENCES dw.usuario_venta(id_usuario)
+    FOREIGN KEY (id_usuario_operador) REFERENCES dw.usuarios(id_usuario)
 );
 
 -- ============================================
