@@ -12,6 +12,8 @@ import NuevaVenta from './pages/NuevaVenta';
 import DetalleVenta from './pages/DetalleVenta';
 import Usuarios from './pages/Usuarios';
 import ComprarPasaje from './pages/ComprarPasaje';
+import Envios from './pages/Envios';
+import NuevoEnvio from './pages/NuevoEnvio';
 
 export default function App() {
   return (
@@ -36,6 +38,8 @@ export default function App() {
             <Route path="ventas/nueva" element={<NuevaVenta />} />
             <Route path="ventas/:id" element={<DetalleVenta />} />
             <Route path="usuarios" element={<Usuarios />} />
+            <Route path="carga" element={<Envios />} />
+            <Route path="carga/nuevo" element={<NuevoEnvio />} />
           </Route>
         </Routes>
       </BrowserRouter>

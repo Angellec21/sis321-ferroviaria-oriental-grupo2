@@ -19,6 +19,7 @@ import pagosRoutes from './routes/pagosRoutes.js';
 import publicoRoutes from './routes/publicoRoutes.js';
 import etlRoutes from './routes/etlRoutes.js';
 import dashboardRoutes from './routes/dashboardRoutes.js';
+import cargaRoutes from './routes/cargaRoutes.js';
 import { authenticateToken } from './middleware/auth.js';
 import registroMetricas, { httpRequestDuration, httpRequestsTotal } from './config/metrics.js';
 
@@ -130,6 +131,9 @@ app.use('/api/admin/etl', authenticateToken, etlRoutes);
 
 // Dashboard KPIs — Actividad 7 (requiere autenticación)
 app.use('/api/dashboard', authenticateToken, dashboardRoutes);
+
+// Envíos de Carga (requiere autenticación + permisos)
+app.use('/api/carga', authenticateToken, cargaRoutes);
 
 // ============================================
 // MANEJO DE ERRORES 404

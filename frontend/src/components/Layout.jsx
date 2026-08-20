@@ -21,6 +21,8 @@ export default function Layout() {
           {tienePermiso('reportes:mantenimiento') && <NavLink to="/reportes/mantenimiento">Mantenimiento</NavLink>}
           {tienePermiso('operaciones:crear_venta') && <NavLink to="/ventas/nueva">Nueva Venta</NavLink>}
           <NavLink to="/ventas">Ventas</NavLink>
+          {tienePermiso('operaciones:crear_envio') && <NavLink to="/carga/nuevo">Nuevo Envío</NavLink>}
+          <NavLink to="/carga">Envíos de Carga</NavLink>
           {tienePermiso('usuarios:leer') && <NavLink to="/usuarios">Usuarios</NavLink>}
         </nav>
         <UserMenu />

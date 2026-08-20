@@ -3,6 +3,7 @@ import api from '../api/client';
 import PublicHeader from '../components/PublicHeader';
 import Spinner from '../components/Spinner';
 import EstadoVacio from '../components/EstadoVacio';
+import MapaAsientos from '../components/MapaAsientos';
 import '../components/PublicHeader.css';
 
 const PASOS = ['viaje', 'pasajeros', 'pago', 'confirmacion'];
@@ -229,45 +230,14 @@ export default function ComprarPasaje() {
             )}
 
             {/* Mapa visual de asientos */}
-            <div style={{ marginBottom: '1.2rem' }}>
-              <p style={{ color: '#b8a890', fontSize: '0.85rem', marginBottom: '0.5rem' }}>
-                <span style={{ display: 'inline-block', width: 14, height: 14, background: '#2ecc71', borderRadius: 3, marginRight: 6, verticalAlign: 'middle' }} />Disponible
-                <span style={{ display: 'inline-block', width: 14, height: 14, background: '#e74c3c', borderRadius: 3, margin: '0 6px 0 16px', verticalAlign: 'middle' }} />Ocupado
-                <span style={{ display: 'inline-block', width: 14, height: 14, background: 'var(--amarillo)', borderRadius: 3, margin: '0 6px 0 16px', verticalAlign: 'middle' }} />Tu selección
-              </p>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
-                {asientos.map((a) => {
-                  const yaElegido = seleccionados.some(s => s.id_asiento === a.id_asiento);
-                  const ocupado = a.estado === 'ocupado';
-                  let bg = '#2ecc71';
-                  if (yaElegido) bg = 'var(--amarillo)';
-                  if (ocupado) bg = '#e74c3c';
-                  return (
-                    <div
-                      key={a.id_asiento}
-                      title={ocupado ? 'Ocupado' : yaElegido ? 'Ya seleccionado' : 'Disponible'}
-                      style={{
-                        background: bg,
-                        color: '#1a1a1a',
-                        fontWeight: 600,
-                        fontSize: '0.75rem',
-                        padding: '0.3rem 0.5rem',
-                        borderRadius: 4,
-                        cursor: ocupado || yaElegido ? 'not-allowed' : 'pointer',
-                        opacity: ocupado ? 0.5 : 1,
-                        minWidth: 42,
-                        textAlign: 'center'
-                      }}
-                      onClick={() => {
-                        if (!ocupado && !yaElegido) setAsientoElegido(String(a.id_asiento));
-                      }}
-                    >
-                      {a.codigo_asiento}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+            <MapaAsientos
+              asientos={asientos}
+              seleccionados={seleccionados}
+              asientoActivo={asientoElegido}
+              onElegir={(a) => {
+                if (a.estado !== 'ocupado') setAsientoElegido(String(a.id_asiento));
+              }}
+            />
 
             {/* Formulario agregar pasajero */}
             <div className="filtros" style={{ alignItems: 'flex-end' }}>

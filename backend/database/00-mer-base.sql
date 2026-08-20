@@ -227,17 +227,19 @@ CREATE TABLE IF NOT EXISTS dw.asiento (
     FOREIGN KEY (id_wagon) REFERENCES dw.wagon_pasajeros(id_wagon) ON DELETE CASCADE
 );
 
+-- NOTA: generate_series(1,10) f, generate_series(1,10) c en el mismo SELECT se
+-- "compaginan" (zip) en vez de cruzarse, y solo produce 10 filas (la diagonal
+-- f=c) en lugar de 100. Se usa CROSS JOIN explícito para el producto completo.
 INSERT INTO dw.asiento (codigo_asiento, id_wagon, fila, columna, ventana, pasillo)
 SELECT
-    CONCAT(CHR((64 + ROW_NUMBER() OVER (PARTITION BY f ORDER BY c))::int), c),
+    'A' || ((f - 1) * 10 + c),
     1,
     f,
     c,
     c IN (1, 10),
     c IN (5, 6)
-FROM (
-    SELECT GENERATE_SERIES(1, 10) as f, GENERATE_SERIES(1, 10) as c
-) grid
+FROM generate_series(1, 10) f
+CROSS JOIN generate_series(1, 10) c
 WHERE NOT EXISTS (SELECT 1 FROM dw.asiento WHERE id_wagon = 1);
 
 INSERT INTO dw.asiento (codigo_asiento, id_wagon, fila, columna, ventana, pasillo)
@@ -246,8 +248,8 @@ SELECT
     2,
     (n - 1) / 10 + 1,
     MOD(n - 1, 10) + 1,
-    FALSE,
-    FALSE
+    MOD(n - 1, 10) + 1 IN (1, 10),
+    MOD(n - 1, 10) + 1 IN (5, 6)
 FROM generate_series(1, 100) AS n
 WHERE NOT EXISTS (SELECT 1 FROM dw.asiento WHERE id_wagon = 2);
 

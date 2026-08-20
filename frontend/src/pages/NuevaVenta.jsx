@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import api from '../api/client';
 import EstadoVacio from '../components/EstadoVacio';
+import MapaAsientos from '../components/MapaAsientos';
 
 export default function NuevaVenta() {
   const [estaciones, setEstaciones] = useState([]);
@@ -10,6 +11,7 @@ export default function NuevaVenta() {
   const [idEstacion, setIdEstacion] = useState('');
   const [idViaje, setIdViaje] = useState('');
   const [seleccionados, setSeleccionados] = useState([]);
+  const [asientoElegido, setAsientoElegido] = useState('');
   const [nombrePasajero, setNombrePasajero] = useState('');
   const [documentoPasajero, setDocumentoPasajero] = useState('');
 
@@ -28,26 +30,33 @@ export default function NuevaVenta() {
     if (idViaje) {
       api.get(`/catalogo/viajes/${idViaje}/asientos`).then((r) => setAsientos(r.data.data));
       setSeleccionados([]);
+      setAsientoElegido('');
     } else {
       setAsientos([]);
     }
   }, [idViaje]);
 
   const agregarPasajero = () => {
-    if (!nombrePasajero) return;
-    const asientoLibre = asientos.find((a) => !seleccionados.some((s) => s.id_asiento === a.id_asiento));
-    if (!asientoLibre) {
-      setError('No hay más asientos disponibles en este viaje');
+    if (!nombrePasajero) {
+      setError('Ingresa el nombre del pasajero');
       return;
     }
+    if (!asientoElegido) {
+      setError('Elige un asiento disponible en el mapa');
+      return;
+    }
+    const asiento = asientos.find((a) => String(a.id_asiento) === String(asientoElegido));
+    if (!asiento) return;
+
     setSeleccionados([...seleccionados, {
-      id_asiento: asientoLibre.id_asiento,
-      codigo_asiento: asientoLibre.codigo_asiento,
+      id_asiento: asiento.id_asiento,
+      codigo_asiento: asiento.codigo_asiento,
       nombre_pasajero: nombrePasajero,
       documento_pasajero: documentoPasajero
     }]);
     setNombrePasajero('');
     setDocumentoPasajero('');
+    setAsientoElegido('');
     setError('');
   };
 
@@ -134,7 +143,28 @@ export default function NuevaVenta() {
           {idViaje && (
             <div className="tarjeta-form">
               <h3>2. Pasajeros — {asientos.length - seleccionados.length} asiento(s) disponibles</h3>
+
+              <MapaAsientos
+                asientos={asientos}
+                seleccionados={seleccionados}
+                asientoActivo={asientoElegido}
+                onElegir={(a) => {
+                  if (a.estado !== 'ocupado') setAsientoElegido(String(a.id_asiento));
+                }}
+              />
+
               <div className="filtros">
+                <label>
+                  Asiento elegido
+                  <select value={asientoElegido} onChange={(e) => setAsientoElegido(e.target.value)}>
+                    <option value="">-- Haz clic en un asiento verde --</option>
+                    {asientos
+                      .filter((a) => a.estado !== 'ocupado' && !seleccionados.some((s) => s.id_asiento === a.id_asiento))
+                      .map((a) => (
+                        <option key={a.id_asiento} value={a.id_asiento}>{a.codigo_asiento}</option>
+                      ))}
+                  </select>
+                </label>
                 <label>
                   Nombre pasajero
                   <input value={nombrePasajero} onChange={(e) => setNombrePasajero(e.target.value)} />
@@ -143,7 +173,7 @@ export default function NuevaVenta() {
                   Documento
                   <input value={documentoPasajero} onChange={(e) => setDocumentoPasajero(e.target.value)} />
                 </label>
-                <button className="primario" onClick={agregarPasajero}>+ Agregar pasajero</button>
+                <button className="primario" onClick={agregarPasajero} disabled={!asientoElegido}>+ Agregar pasajero</button>
               </div>
 
               {seleccionados.length === 0 ? (

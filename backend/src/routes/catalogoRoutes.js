@@ -13,5 +13,6 @@ router.get('/trenes', catalogoController.listarTrenes);
 router.get('/rutas', catalogoController.listarRutas);
 router.get('/viajes', catalogoController.listarViajes);
 router.get('/viajes/:id/asientos', catalogoController.asientosDisponiblesPorViaje);
+router.get('/viajes/:id/vagones-carga', catalogoController.vagonesCargaDisponiblesPorViaje);
 
 export default router;

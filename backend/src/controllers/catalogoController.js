@@ -69,7 +69,8 @@ export const asientosDisponiblesPorViaje = async (req, res) => {
   }
 
   const resultado = await query(
-    `SELECT a.id_asiento, a.codigo_asiento, w.id_wagon, w.tipo_wagon,
+    `SELECT a.id_asiento, a.codigo_asiento, a.fila, a.columna, a.ventana, a.pasillo,
+            w.id_wagon, w.tipo_wagon,
             CASE WHEN r.id_asiento IS NOT NULL THEN 'ocupado' ELSE 'disponible' END AS estado
      FROM dw.asiento a
      JOIN dw.wagon w ON a.id_wagon = w.id_wagon
@@ -78,7 +79,36 @@ export const asientosDisponiblesPorViaje = async (req, res) => {
        WHERE id_viaje = $2 AND estado_reserva IN ('activa', 'pagada')
      ) r ON a.id_asiento = r.id_asiento
      WHERE w.id_tren = $1
-     ORDER BY w.id_wagon, a.codigo_asiento`,
+     ORDER BY w.id_wagon, a.fila, a.columna`,
+    [viaje.rows[0].id_tren, id]
+  );
+
+  res.json({ success: true, data: resultado.rows });
+};
+
+/**
+ * GET /api/catalogo/viajes/:id/vagones-carga
+ * Vagones de carga del tren de ese viaje, con capacidad ya ocupada por
+ * envíos registrados (no cancelados) y capacidad restante.
+ */
+export const vagonesCargaDisponiblesPorViaje = async (req, res) => {
+  const { id } = req.params;
+
+  const viaje = await query('SELECT id_tren FROM dw.viaje WHERE id_viaje = $1', [id]);
+  if (viaje.rows.length === 0) {
+    return res.status(404).json({ success: false, message: 'Viaje no encontrado', code: 'TRIP_NOT_FOUND' });
+  }
+
+  const resultado = await query(
+    `SELECT w.id_wagon, w.codigo_wagon, wc.capacidad_carga_kg, wc.tipo_carga,
+            COALESCE(SUM(ec.peso_kg) FILTER (WHERE ec.estado_envio != 'cancelado'), 0) AS peso_ocupado_kg,
+            wc.capacidad_carga_kg - COALESCE(SUM(ec.peso_kg) FILTER (WHERE ec.estado_envio != 'cancelado'), 0) AS peso_disponible_kg
+     FROM dw.wagon w
+     JOIN dw.wagon_carga wc ON wc.id_wagon = w.id_wagon
+     LEFT JOIN dw.envio_carga ec ON ec.id_wagon_carga = w.id_wagon AND ec.id_viaje = $2
+     WHERE w.id_tren = $1
+     GROUP BY w.id_wagon, w.codigo_wagon, wc.capacidad_carga_kg, wc.tipo_carga
+     ORDER BY w.id_wagon`,
     [viaje.rows[0].id_tren, id]
   );
 
@@ -91,5 +121,6 @@ export default {
   listarTrenes,
   listarRutas,
   listarViajes,
-  asientosDisponiblesPorViaje
+  asientosDisponiblesPorViaje,
+  vagonesCargaDisponiblesPorViaje
 };

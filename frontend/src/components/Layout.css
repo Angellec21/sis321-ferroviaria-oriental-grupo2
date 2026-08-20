@@ -433,6 +433,11 @@ button.primario:hover {
 .badge.alta { background: #1d3a1f; color: #a8e8a0; }
 .badge.baja { background: #4a1d22; color: #ff8a8a; }
 
+.badge-registrado { background: #1d2e4a; color: #8ab4e8; }
+.badge-en_transito { background: #4a3a1d; color: var(--amarillo); }
+.badge-entregado { background: #1d3a1f; color: #a8e8a0; }
+.badge-cancelado { background: #4a1d22; color: #ff8a8a; }
+
 .error-msg {
   background: #4a1d22;
   color: #ff8a8a;

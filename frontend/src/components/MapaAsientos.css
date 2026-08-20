@@ -1,0 +1,73 @@
+.mapa-asientos-leyenda {
+  color: var(--texto-muted);
+  font-size: 0.85rem;
+  margin-bottom: 0.9rem;
+}
+
+.mapa-asientos-leyenda .chip {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  margin: 0 6px 0 16px;
+  vertical-align: middle;
+}
+.mapa-asientos-leyenda .chip:first-child { margin-left: 0; }
+
+.chip-disponible, .asiento-disponible { background: #2ecc71; }
+.chip-ocupado, .asiento-ocupado { background: #e74c3c; }
+.chip-elegido, .asiento-elegido { background: var(--amarillo); }
+
+.mapa-asientos-vagones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.2rem;
+  margin-bottom: 1.2rem;
+}
+
+.vagon-box {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--borde);
+  border-radius: 10px;
+  padding: 0.9rem;
+  overflow-x: auto;
+}
+
+.vagon-titulo {
+  color: var(--texto-muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+  margin-bottom: 0.6rem;
+}
+
+.vagon-grid {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.asiento-btn {
+  width: 2.1rem;
+  height: 2.1rem;
+  border: none;
+  border-radius: 5px;
+  color: #1a1a1a;
+  font-weight: 700;
+  font-size: 0.62rem;
+  cursor: pointer;
+  padding: 0;
+}
+
+.asiento-btn.asiento-ocupado {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.asiento-btn.asiento-elegido {
+  cursor: not-allowed;
+  box-shadow: 0 0 0 2px var(--naranja) inset;
+}
+
+.asiento-btn.asiento-disponible:hover {
+  filter: brightness(1.15);
+  transform: scale(1.06);
+}
