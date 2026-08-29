@@ -125,7 +125,7 @@ export default function ComprarPasaje() {
     setProcesandoPago(true);
     try {
       await new Promise((r) => setTimeout(r, 1400));
-      await api.post('/public/pagos', { id_venta: compra.id_venta, tipo_pago: metodoPago });
+      await api.post('/public/pagos', { codigo_venta: compra.codigo_venta, tipo_pago: metodoPago });
       const { data } = await api.get(`/public/compras/${compra.codigo_venta}`);
       setTicket(data.data);
       setPaso('confirmacion');

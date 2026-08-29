@@ -103,8 +103,8 @@ export const obtenerKPIs = async (req, res) => {
         -- ── KPI 4: Ocupación promedio del DW ─────────────────
         (SELECT ROUND(AVG(ocupacion_pct), 1) FROM ocupacion_por_ruta) AS kpi_ocupacion_promedio,
 
-        -- ── KPI 5: Reservas activas en este momento ───────────
-        (SELECT COUNT(*) FROM dw.reserva WHERE estado_reserva = 'activa')    AS kpi_reservas_activas,
+        -- ── KPI 5: Ventas activas en este momento ─────────────
+        (SELECT COUNT(*) FROM dw.venta WHERE estado_venta = 'activa')       AS kpi_reservas_activas,
 
         -- ── KPI 6: Trenes operativos ──────────────────────────
         (SELECT COUNT(*) FROM dw.tren WHERE estado = 'operativo')            AS kpi_trenes_operativos,

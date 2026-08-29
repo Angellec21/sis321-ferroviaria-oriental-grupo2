@@ -75,8 +75,8 @@ export const asientosDisponiblesPorViaje = async (req, res) => {
      FROM dw.asiento a
      JOIN dw.wagon w ON a.id_wagon = w.id_wagon
      LEFT JOIN (
-       SELECT DISTINCT id_asiento FROM dw.reserva
-       WHERE id_viaje = $2 AND estado_reserva IN ('activa', 'pagada')
+       SELECT DISTINCT id_asiento FROM dw.venta
+       WHERE id_viaje = $2 AND estado_venta IN ('activa', 'pagada')
      ) r ON a.id_asiento = r.id_asiento
      WHERE w.id_tren = $1
      ORDER BY w.id_wagon, a.fila, a.columna`,

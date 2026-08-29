@@ -8,15 +8,17 @@ const TIPOS_VALIDOS = ['qr', 'transferencia', 'ventanilla'];
 
 /**
  * POST /api/pagos
- * Registra un pago para una venta y/o reserva, y marca la reserva como pagada
- * @body { id_venta, id_reserva?, monto, tipo_pago, detalle_especifico? }
+ * Registra un pago que cubre TODAS las ventas del mismo codigo_venta
+ * que la venta indicada (una compra puede incluir varios pasajeros),
+ * y las marca como pagadas.
+ * @body { id_venta, monto, tipo_pago, detalle_especifico? }
  *   detalle_especifico según tipo_pago:
  *     qr            -> { codigo_qr?, billetera_digital?, transaccion_externa_id? }
  *     transferencia -> { banco_origen?, numero_cuenta_origen?, numero_referencia_transferencia?, banco_receptor? }
  *     ventanilla    -> { id_usuario_operador (FK a dw.usuarios), metodo_pago_local?, comprobante_numero? }
  */
 export const crearPago = async (req, res) => {
-  const { id_venta, id_reserva = null, monto, tipo_pago, detalle_especifico = {} } = req.body;
+  const { id_venta, monto, tipo_pago, detalle_especifico = {} } = req.body;
 
   if (!id_venta || !monto || !tipo_pago || !TIPOS_VALIDOS.includes(tipo_pago)) {
     return res.status(400).json({
@@ -38,12 +40,19 @@ export const crearPago = async (req, res) => {
   try {
     await cliente.query('BEGIN');
 
+    const ventaRes = await cliente.query(`SELECT codigo_venta FROM dw.venta WHERE id_venta = $1`, [id_venta]);
+    if (ventaRes.rows.length === 0) {
+      await cliente.query('ROLLBACK');
+      return res.status(404).json({ success: false, message: 'Venta no encontrada', code: 'SALE_NOT_FOUND' });
+    }
+    const codigoVenta = ventaRes.rows[0].codigo_venta;
+
     const codigoPago = `P-${Date.now()}`;
     const pago = await cliente.query(
-      `INSERT INTO dw.pago (codigo_pago, id_reserva, id_venta, monto, tipo_pago, estado_pago, fecha_pago)
-       VALUES ($1, $2, $3, $4, $5, 'confirmado', NOW())
+      `INSERT INTO dw.pago (codigo_pago, id_venta, monto, tipo_pago, estado_pago, fecha_pago)
+       VALUES ($1, $2, $3, $4, 'confirmado', NOW())
        RETURNING id_pago, codigo_pago, monto, tipo_pago, estado_pago, fecha_pago`,
-      [codigoPago, id_reserva, id_venta, monto, tipo_pago]
+      [codigoPago, id_venta, monto, tipo_pago]
     );
     const idPago = pago.rows[0].id_pago;
 
@@ -78,17 +87,10 @@ export const crearPago = async (req, res) => {
       );
     }
 
-    if (id_reserva) {
-      await cliente.query(
-        `UPDATE dw.reserva SET estado_reserva = 'pagada' WHERE id_reserva = $1`,
-        [id_reserva]
-      );
-    } else {
-      await cliente.query(
-        `UPDATE dw.reserva SET estado_reserva = 'pagada' WHERE id_venta = $1 AND estado_reserva = 'activa'`,
-        [id_venta]
-      );
-    }
+    await cliente.query(
+      `UPDATE dw.venta SET estado_venta = 'pagada' WHERE codigo_venta = $1 AND estado_venta = 'activa'`,
+      [codigoVenta]
+    );
 
     await cliente.query('COMMIT');
 
@@ -122,10 +124,9 @@ export const listarPagos = async (req, res) => {
 
   const pagos = await getAll(
     `SELECT p.id_pago, p.codigo_pago, p.monto, p.tipo_pago, p.estado_pago, p.fecha_pago,
-            v.codigo_venta, r.codigo_reserva
+            v.codigo_venta
      FROM dw.pago p
      LEFT JOIN dw.venta v ON p.id_venta = v.id_venta
-     LEFT JOIN dw.reserva r ON p.id_reserva = r.id_reserva
      ${where}
      ORDER BY p.fecha_pago DESC
      LIMIT $${params.length - 1} OFFSET $${params.length}`,

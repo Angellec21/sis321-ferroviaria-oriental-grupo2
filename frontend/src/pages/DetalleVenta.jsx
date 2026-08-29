@@ -22,7 +22,7 @@ export default function DetalleVenta() {
   const cancelar = async (idReserva) => {
     if (!window.confirm('¿Cancelar esta reserva y liberar el asiento?')) return;
     try {
-      await api.patch(`/ventas/reservas/${idReserva}/cancelar`);
+      await api.patch(`/ventas/${idReserva}/cancelar`);
       cargar();
     } catch (err) {
       setError(err.response?.data?.message || 'Error al cancelar la reserva');

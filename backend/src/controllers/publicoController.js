@@ -2,6 +2,8 @@
 // Controlador: Compra Pública (sin registro de cliente)
 // El cliente NO crea cuenta. Solo elige viaje, asientos,
 // datos del pasajero y paga vía la Pasarela de Pagos (QR/Transferencia).
+// Venta pura: cada pasajero/asiento es su propia fila de dw.venta;
+// varias filas de una misma compra comparten codigo_venta.
 // ============================================
 
 import pool, { query } from '../config/database.js';
@@ -10,7 +12,8 @@ const TIPOS_PASARELA = ['qr', 'transferencia'];
 
 /**
  * POST /api/public/compras
- * Crea la venta + reservas para un cliente anónimo (sin id_usuario)
+ * Crea una venta por cada pasajero anónimo (sin id_usuario), todas con
+ * el mismo codigo_venta
  * @body { id_viaje, pasajeros: [{ id_asiento, nombre_pasajero, documento_pasajero, email_pasajero?, telefono_pasajero? }] }
  */
 export const crearCompra = async (req, res) => {
@@ -51,37 +54,29 @@ export const crearCompra = async (req, res) => {
 
     const { estacion_origen, tarifa_adulto } = viajeRes.rows[0];
     const tarifa = Number(tarifa_adulto) || 60;
-    const montoTotal = tarifa * pasajeros.length;
     const codigoVenta = `WEB${Date.now()}`;
 
-    const venta = await cliente.query(
-      `INSERT INTO dw.venta (codigo_venta, id_usuario, id_estacion, monto_total, sincronizado_central)
-       VALUES ($1, NULL, $2, $3, TRUE)
-       RETURNING id_venta, codigo_venta, monto_total, fecha_venta`,
-      [codigoVenta, estacion_origen, montoTotal]
-    );
-    const idVenta = venta.rows[0].id_venta;
-
-    const reservasCreadas = [];
-    for (const [i, pax] of pasajeros.entries()) {
-      const codigoReserva = `WR${Date.now()}${i}`;
-      const reserva = await cliente.query(
-        `INSERT INTO dw.reserva
-            (codigo_reserva, id_viaje, id_asiento, id_venta, nombre_pasajero, documento_pasajero, email_pasajero, telefono_pasajero, estado_reserva)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'activa')
-         RETURNING id_reserva, codigo_reserva, id_asiento, nombre_pasajero`,
+    const ventasCreadas = [];
+    for (const pax of pasajeros) {
+      const venta = await cliente.query(
+        `INSERT INTO dw.venta
+            (codigo_venta, id_usuario, id_estacion, monto_total, id_viaje, id_asiento,
+             nombre_pasajero, documento_pasajero, email_pasajero, telefono_pasajero, estado_venta, sincronizado_central)
+         VALUES ($1, NULL, $2, $3, $4, $5, $6, $7, $8, $9, 'activa', TRUE)
+         RETURNING id_venta, codigo_venta, monto_total, id_asiento, nombre_pasajero`,
         [
-          codigoReserva,
+          codigoVenta,
+          estacion_origen,
+          tarifa,
           id_viaje,
           pax.id_asiento,
-          idVenta,
           pax.nombre_pasajero,
           pax.documento_pasajero,
           pax.email_pasajero || null,
           pax.telefono_pasajero || null
         ]
       );
-      reservasCreadas.push(reserva.rows[0]);
+      ventasCreadas.push(venta.rows[0]);
     }
 
     await cliente.query('COMMIT');
@@ -89,7 +84,14 @@ export const crearCompra = async (req, res) => {
     res.status(201).json({
       success: true,
       message: 'Compra registrada, continúa con el pago',
-      data: { venta: venta.rows[0], reservas: reservasCreadas }
+      data: {
+        venta: {
+          id_venta: ventasCreadas[0].id_venta,
+          codigo_venta: codigoVenta,
+          monto_total: tarifa * pasajeros.length
+        },
+        reservas: ventasCreadas
+      }
     });
   } catch (error) {
     await cliente.query('ROLLBACK');
@@ -98,7 +100,7 @@ export const crearCompra = async (req, res) => {
     if (error.code === '23505') {
       return res.status(409).json({
         success: false,
-        message: 'Uno de los asientos seleccionados ya fue reservado. Vuelve a elegir asiento.',
+        message: 'Uno de los asientos seleccionados ya fue vendido. Vuelve a elegir asiento.',
         code: 'SEAT_ALREADY_RESERVED'
       });
     }
@@ -111,18 +113,19 @@ export const crearCompra = async (req, res) => {
 
 /**
  * POST /api/public/pagos
- * Simula la Pasarela de Pagos externa (QR / Transferencia):
- * el cliente elige el método, "la pasarela" aprueba la transacción
- * y el sistema confirma el pago y marca las reservas como pagadas.
- * @body { id_venta, tipo_pago: 'qr' | 'transferencia' }
+ * Simula la Pasarela de Pagos externa (QR / Transferencia): el cliente
+ * elige el método, "la pasarela" aprueba la transacción y el sistema
+ * confirma el pago (un solo pago cubre todas las ventas del mismo
+ * codigo_venta) y marca esas ventas como pagadas.
+ * @body { codigo_venta, tipo_pago: 'qr' | 'transferencia' }
  */
 export const procesarPago = async (req, res) => {
-  const { id_venta, tipo_pago } = req.body;
+  const { codigo_venta, tipo_pago } = req.body;
 
-  if (!id_venta || !TIPOS_PASARELA.includes(tipo_pago)) {
+  if (!codigo_venta || !TIPOS_PASARELA.includes(tipo_pago)) {
     return res.status(400).json({
       success: false,
-      message: `Campos requeridos: id_venta, tipo_pago (uno de: ${TIPOS_PASARELA.join(', ')})`,
+      message: `Campos requeridos: codigo_venta, tipo_pago (uno de: ${TIPOS_PASARELA.join(', ')})`,
       code: 'MISSING_FIELDS'
     });
   }
@@ -131,26 +134,30 @@ export const procesarPago = async (req, res) => {
   try {
     await cliente.query('BEGIN');
 
-    const ventaRes = await cliente.query(
-      `SELECT id_venta, codigo_venta, monto_total FROM dw.venta WHERE id_venta = $1 AND id_usuario IS NULL`,
-      [id_venta]
+    const ventasRes = await cliente.query(
+      `SELECT id_venta, monto_total FROM dw.venta
+       WHERE codigo_venta = $1 AND id_usuario IS NULL AND estado_venta != 'cancelada'
+       ORDER BY id_venta`,
+      [codigo_venta]
     );
 
-    if (ventaRes.rows.length === 0) {
+    if (ventasRes.rows.length === 0) {
       await cliente.query('ROLLBACK');
       return res.status(404).json({ success: false, message: 'Compra no encontrada', code: 'SALE_NOT_FOUND' });
     }
 
+    const idVentaPrincipal = ventasRes.rows[0].id_venta;
+    const montoTotal = ventasRes.rows.reduce((suma, v) => suma + Number(v.monto_total), 0);
+
     const yaPagado = await cliente.query(
       `SELECT 1 FROM dw.pago WHERE id_venta = $1 AND estado_pago = 'confirmado'`,
-      [id_venta]
+      [idVentaPrincipal]
     );
     if (yaPagado.rows.length > 0) {
       await cliente.query('ROLLBACK');
       return res.status(409).json({ success: false, message: 'Esta compra ya fue pagada', code: 'ALREADY_PAID' });
     }
 
-    const venta = ventaRes.rows[0];
     const referenciaExterna = `GW-${Date.now()}`;
     const codigoPago = `P-${Date.now()}`;
 
@@ -158,7 +165,7 @@ export const procesarPago = async (req, res) => {
       `INSERT INTO dw.pago (codigo_pago, id_venta, monto, tipo_pago, estado_pago, fecha_pago)
        VALUES ($1, $2, $3, $4, 'confirmado', NOW())
        RETURNING id_pago, codigo_pago, monto, tipo_pago, estado_pago, fecha_pago`,
-      [codigoPago, id_venta, venta.monto_total, tipo_pago]
+      [codigoPago, idVentaPrincipal, montoTotal, tipo_pago]
     );
     const idPago = pago.rows[0].id_pago;
 
@@ -166,7 +173,7 @@ export const procesarPago = async (req, res) => {
       await cliente.query(
         `INSERT INTO dw.pago_qr (id_pago, codigo_qr, transaccion_externa_id)
          VALUES ($1, $2, $3)`,
-        [idPago, `QR-${venta.codigo_venta}`, referenciaExterna]
+        [idPago, `QR-${codigo_venta}`, referenciaExterna]
       );
     } else {
       await cliente.query(
@@ -177,8 +184,8 @@ export const procesarPago = async (req, res) => {
     }
 
     await cliente.query(
-      `UPDATE dw.reserva SET estado_reserva = 'pagada' WHERE id_venta = $1 AND estado_reserva = 'activa'`,
-      [id_venta]
+      `UPDATE dw.venta SET estado_venta = 'pagada' WHERE codigo_venta = $1 AND estado_venta = 'activa'`,
+      [codigo_venta]
     );
 
     await cliente.query('COMMIT');
@@ -186,7 +193,7 @@ export const procesarPago = async (req, res) => {
     res.status(201).json({
       success: true,
       message: 'Pago aprobado por la pasarela',
-      data: { ...pago.rows[0], referenciaExterna, codigoVenta: venta.codigo_venta }
+      data: { ...pago.rows[0], referenciaExterna, codigoVenta: codigo_venta }
     });
   } catch (error) {
     await cliente.query('ROLLBACK');
@@ -199,40 +206,57 @@ export const procesarPago = async (req, res) => {
 
 /**
  * GET /api/public/compras/:codigo
- * Consulta el ticket por código de venta (no requiere cuenta)
+ * Consulta el ticket por código de venta (no requiere cuenta). Agrupa
+ * todas las filas de venta que comparten ese codigo_venta.
  */
 export const obtenerCompraPorCodigo = async (req, res) => {
   const { codigo } = req.params;
 
-  const venta = await query(
-    `SELECT v.id_venta, v.codigo_venta, v.monto_total, v.fecha_venta, e.nombre AS estacion
+  const filas = await query(
+    `SELECT v.id_venta, v.codigo_venta, v.monto_total, v.nombre_pasajero, v.estado_venta, v.fecha_venta,
+            a.codigo_asiento, vi.codigo_viaje, vi.fecha_salida, rf.nombre AS ruta, e.nombre AS estacion
      FROM dw.venta v
+     JOIN dw.asiento a ON v.id_asiento = a.id_asiento
+     JOIN dw.viaje vi ON v.id_viaje = vi.id_viaje
+     JOIN dw.ruta_ferroviaria rf ON vi.id_ruta = rf.id_ruta
      JOIN dw.estacion e ON v.id_estacion = e.id_estacion
-     WHERE v.codigo_venta = $1 AND v.id_usuario IS NULL`,
+     WHERE v.codigo_venta = $1 AND v.id_usuario IS NULL
+     ORDER BY v.id_venta`,
     [codigo]
   );
 
-  if (venta.rows.length === 0) {
+  if (filas.rows.length === 0) {
     return res.status(404).json({ success: false, message: 'Ticket no encontrado', code: 'NOT_FOUND' });
   }
 
-  const reservas = await query(
-    `SELECT r.id_reserva, r.codigo_reserva, r.nombre_pasajero, r.estado_reserva, a.codigo_asiento,
-            vi.codigo_viaje, vi.fecha_salida, rf.nombre AS ruta
-     FROM dw.reserva r
-     JOIN dw.asiento a ON r.id_asiento = a.id_asiento
-     JOIN dw.viaje vi ON r.id_viaje = vi.id_viaje
-     JOIN dw.ruta_ferroviaria rf ON vi.id_ruta = rf.id_ruta
-     WHERE r.id_venta = $1`,
-    [venta.rows[0].id_venta]
-  );
+  const primera = filas.rows[0];
+  const montoTotal = filas.rows.reduce((suma, f) => suma + Number(f.monto_total), 0);
 
   const pagos = await query(
-    `SELECT codigo_pago, monto, tipo_pago, estado_pago, fecha_pago FROM dw.pago WHERE id_venta = $1`,
-    [venta.rows[0].id_venta]
+    `SELECT codigo_pago, monto, tipo_pago, estado_pago, fecha_pago FROM dw.pago WHERE id_venta = ANY($1)`,
+    [filas.rows.map((f) => f.id_venta)]
   );
 
-  res.json({ success: true, data: { ...venta.rows[0], reservas: reservas.rows, pagos: pagos.rows } });
+  res.json({
+    success: true,
+    data: {
+      id_venta: primera.id_venta,
+      codigo_venta: primera.codigo_venta,
+      monto_total: montoTotal,
+      fecha_venta: primera.fecha_venta,
+      estacion: primera.estacion,
+      reservas: filas.rows.map((f) => ({
+        id_reserva: f.id_venta,
+        codigo_reserva: f.codigo_venta,
+        nombre_pasajero: f.nombre_pasajero,
+        estado_reserva: f.estado_venta,
+        codigo_asiento: f.codigo_asiento,
+        ruta: f.ruta,
+        fecha_salida: f.fecha_salida
+      })),
+      pagos: pagos.rows
+    }
+  });
 };
 
 export default { crearCompra, procesarPago, obtenerCompraPorCodigo };

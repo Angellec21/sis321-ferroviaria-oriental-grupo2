@@ -1,6 +1,6 @@
 // ============================================
 // Controlador: ETL del Data Warehouse
-// Extrae datos de las tablas transaccionales (reserva, pago, viaje)
+// Extrae datos de las tablas transaccionales (venta, pago, viaje)
 // y los carga en las tablas analíticas del DW (metrica_ocupacion, metrica_combustible)
 // ============================================
 
@@ -19,20 +19,20 @@ export const ejecutarETL = async (req, res) => {
   try {
     await cliente.query('BEGIN');
 
-    // ---- ETL 1: Ocupación desde reservas reales ----
+    // ---- ETL 1: Ocupación desde ventas reales ----
     const etlOcupacion = await cliente.query(`
       WITH ocupacion_real AS (
         SELECT
           v.id_ruta,
           a.id_wagon,
           DATE(v.fecha_salida) AS fecha_calculo,
-          COUNT(DISTINCT r.id_asiento) FILTER (WHERE r.estado_reserva = 'pagada') AS asientos_vendidos,
+          COUNT(DISTINCT r.id_asiento) FILTER (WHERE r.estado_venta = 'pagada') AS asientos_vendidos,
           wp.cantidad_asientos AS asientos_totales
         FROM dw.viaje v
-        JOIN dw.reserva r ON v.id_viaje = r.id_viaje
+        JOIN dw.venta r ON v.id_viaje = r.id_viaje
         JOIN dw.asiento a ON r.id_asiento = a.id_asiento
         JOIN dw.wagon_pasajeros wp ON a.id_wagon = wp.id_wagon
-        WHERE r.estado_reserva != 'cancelada'
+        WHERE r.estado_venta != 'cancelada'
         GROUP BY v.id_ruta, a.id_wagon, DATE(v.fecha_salida), wp.cantidad_asientos
       ),
       upserted AS (
