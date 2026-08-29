@@ -4,6 +4,8 @@
 
 import { query } from '../config/database.js';
 
+const ID_EMPRESA_DEFAULT = 1; // el sistema modela una sola empresa
+
 export const listarRoles = async (req, res) => {
   const resultado = await query(
     `SELECT id_rol, nombre, descripcion, nivel_acceso FROM dw.roles WHERE estado = TRUE ORDER BY nivel_acceso DESC`
@@ -115,6 +117,121 @@ export const vagonesCargaDisponiblesPorViaje = async (req, res) => {
   res.json({ success: true, data: resultado.rows });
 };
 
+/**
+ * POST /api/catalogo/estaciones
+ * Crea una nueva estación (ciudad/destino nuevo)
+ * @body { nombre, ciudad, departamento? }
+ */
+export const crearEstacion = async (req, res) => {
+  const { nombre, ciudad, departamento } = req.body;
+
+  if (!nombre || !ciudad) {
+    return res.status(400).json({
+      success: false,
+      message: 'Campos requeridos: nombre, ciudad',
+      code: 'MISSING_FIELDS'
+    });
+  }
+
+  const resultado = await query(
+    `INSERT INTO dw.estacion (nombre, ciudad, departamento, id_empresa)
+     VALUES ($1, $2, $3, $4)
+     RETURNING id_estacion, nombre, ciudad`,
+    [nombre, ciudad, departamento || null, ID_EMPRESA_DEFAULT]
+  );
+
+  res.status(201).json({ success: true, message: 'Estación creada exitosamente', data: resultado.rows[0] });
+};
+
+/**
+ * POST /api/catalogo/rutas
+ * Crea una nueva ruta ferroviaria entre dos estaciones existentes
+ * @body { nombre, estacion_origen, estacion_destino, distancia_km, duracion_estimada_minutos,
+ *         rendimiento_combustible_kml?, tarifa_adulto?, tarifa_niño?, tarifa_senior? }
+ */
+export const crearRuta = async (req, res) => {
+  const {
+    nombre, estacion_origen, estacion_destino, distancia_km, duracion_estimada_minutos,
+    rendimiento_combustible_kml, tarifa_adulto, tarifa_niño, tarifa_senior
+  } = req.body;
+
+  if (!nombre || !estacion_origen || !estacion_destino || !distancia_km || !duracion_estimada_minutos) {
+    return res.status(400).json({
+      success: false,
+      message: 'Campos requeridos: nombre, estacion_origen, estacion_destino, distancia_km, duracion_estimada_minutos',
+      code: 'MISSING_FIELDS'
+    });
+  }
+
+  if (Number(estacion_origen) === Number(estacion_destino)) {
+    return res.status(400).json({
+      success: false,
+      message: 'La estación de origen y destino deben ser distintas',
+      code: 'INVALID_ROUTE'
+    });
+  }
+
+  try {
+    const resultado = await query(
+      `INSERT INTO dw.ruta_ferroviaria
+          (nombre, estacion_origen, estacion_destino, distancia_km, duracion_estimada_minutos,
+           rendimiento_combustible_kml, tarifa_adulto, tarifa_niño, tarifa_senior)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+       RETURNING id_ruta, nombre, distancia_km, duracion_estimada_minutos`,
+      [
+        nombre, estacion_origen, estacion_destino, distancia_km, duracion_estimada_minutos,
+        rendimiento_combustible_kml || 3.5, tarifa_adulto || 60, tarifa_niño || 0, tarifa_senior || 0
+      ]
+    );
+    res.status(201).json({ success: true, message: 'Ruta creada exitosamente', data: resultado.rows[0] });
+  } catch (error) {
+    if (error.code === '23505') {
+      return res.status(409).json({
+        success: false,
+        message: 'Ya existe una ruta entre esas dos estaciones',
+        code: 'ROUTE_ALREADY_EXISTS'
+      });
+    }
+    throw error;
+  }
+};
+
+/**
+ * POST /api/catalogo/viajes
+ * Programa un nuevo viaje (fecha/hora concreta) sobre una ruta existente,
+ * con una locomotora asignada. Esto es lo que aparece como comprable.
+ * @body { id_ruta, id_tren, fecha_salida, fecha_llegada_estimada }
+ */
+export const crearViaje = async (req, res) => {
+  const { id_ruta, id_tren, fecha_salida, fecha_llegada_estimada } = req.body;
+
+  if (!id_ruta || !id_tren || !fecha_salida || !fecha_llegada_estimada) {
+    return res.status(400).json({
+      success: false,
+      message: 'Campos requeridos: id_ruta, id_tren, fecha_salida, fecha_llegada_estimada',
+      code: 'MISSING_FIELDS'
+    });
+  }
+
+  if (new Date(fecha_llegada_estimada) <= new Date(fecha_salida)) {
+    return res.status(400).json({
+      success: false,
+      message: 'La fecha de llegada estimada debe ser posterior a la de salida',
+      code: 'INVALID_DATES'
+    });
+  }
+
+  const codigoViaje = `VJ-${Date.now()}`;
+  const resultado = await query(
+    `INSERT INTO dw.viaje (codigo_viaje, id_tren, id_ruta, fecha_salida, fecha_llegada_estimada, estado_viaje)
+     VALUES ($1, $2, $3, $4, $5, 'programado')
+     RETURNING id_viaje, codigo_viaje, fecha_salida, fecha_llegada_estimada`,
+    [codigoViaje, id_tren, id_ruta, fecha_salida, fecha_llegada_estimada]
+  );
+
+  res.status(201).json({ success: true, message: 'Viaje programado exitosamente', data: resultado.rows[0] });
+};
+
 export default {
   listarRoles,
   listarEstaciones,
@@ -122,5 +239,8 @@ export default {
   listarRutas,
   listarViajes,
   asientosDisponiblesPorViaje,
-  vagonesCargaDisponiblesPorViaje
+  vagonesCargaDisponiblesPorViaje,
+  crearEstacion,
+  crearRuta,
+  crearViaje
 };

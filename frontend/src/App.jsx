@@ -14,6 +14,7 @@ import Usuarios from './pages/Usuarios';
 import ComprarPasaje from './pages/ComprarPasaje';
 import Envios from './pages/Envios';
 import NuevoEnvio from './pages/NuevoEnvio';
+import AdminCatalogo from './pages/AdminCatalogo';
 
 export default function App() {
   return (
@@ -40,6 +41,7 @@ export default function App() {
             <Route path="usuarios" element={<Usuarios />} />
             <Route path="carga" element={<Envios />} />
             <Route path="carga/nuevo" element={<NuevoEnvio />} />
+            <Route path="catalogo" element={<AdminCatalogo />} />
           </Route>
         </Routes>
       </BrowserRouter>

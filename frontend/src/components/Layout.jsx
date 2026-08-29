@@ -24,6 +24,7 @@ export default function Layout() {
           {tienePermiso('operaciones:crear_envio') && <NavLink to="/carga/nuevo">Nuevo Envío</NavLink>}
           <NavLink to="/carga">Envíos de Carga</NavLink>
           {tienePermiso('usuarios:leer') && <NavLink to="/usuarios">Usuarios</NavLink>}
+          {tienePermiso('catalogo:administrar') && <NavLink to="/catalogo">Catálogo</NavLink>}
         </nav>
         <UserMenu />
       </aside>
