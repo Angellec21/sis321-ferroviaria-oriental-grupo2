@@ -3,6 +3,7 @@
 // ============================================
 
 import { query, getAll } from '../config/database.js';
+import { validarPesoEnvio } from '../utils/validacionesCarga.js';
 
 const ESTADOS_VALIDOS = ['registrado', 'en_transito', 'entregado', 'cancelado'];
 
@@ -24,10 +25,6 @@ export const crearEnvio = async (req, res) => {
     });
   }
 
-  if (Number(peso_kg) <= 0) {
-    return res.status(400).json({ success: false, message: 'El peso debe ser mayor a 0', code: 'INVALID_WEIGHT' });
-  }
-
   const vagon = await query(
     `SELECT wc.capacidad_carga_kg,
             wc.capacidad_carga_kg - COALESCE((
@@ -43,11 +40,13 @@ export const crearEnvio = async (req, res) => {
     return res.status(404).json({ success: false, message: 'Vagón de carga no encontrado', code: 'WAGON_NOT_FOUND' });
   }
 
-  if (Number(peso_kg) > Number(vagon.rows[0].peso_disponible_kg)) {
-    return res.status(409).json({
+  const { valido, motivo } = validarPesoEnvio(peso_kg, vagon.rows[0].peso_disponible_kg);
+  if (!valido) {
+    const esCapacidad = motivo.includes('capacidad');
+    return res.status(esCapacidad ? 409 : 400).json({
       success: false,
-      message: `Excede la capacidad disponible del vagón (${vagon.rows[0].peso_disponible_kg} kg libres)`,
-      code: 'CAPACITY_EXCEEDED'
+      message: motivo,
+      code: esCapacidad ? 'CAPACITY_EXCEEDED' : 'INVALID_WEIGHT'
     });
   }
 
