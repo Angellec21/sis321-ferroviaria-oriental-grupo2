@@ -5,7 +5,7 @@
 // cachea la app y encola ventas/pagos hechos sin conexión.
 // ============================================
 
-const CACHE_VERSION = 'dss-ferroviaria-v1';
+const CACHE_VERSION = 'dss-ferroviaria-v2';
 const APP_SHELL = ['/', '/manifest.json', '/favicon.svg'];
 const DB_NAME = 'dss-cola-sincronizacion';
 const STORE_NAME = 'pendientes';
@@ -88,10 +88,18 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // App shell / assets estaticos: cache-first
+  // App shell / assets estaticos: network-first (para no quedar servidos
+  // desde una version vieja en cache tras un deploy), con fallback a cache
+  // solo cuando de verdad no hay conexion.
   if (request.method === 'GET' && url.origin === self.location.origin) {
     event.respondWith(
-      caches.match(request).then((cacheada) => cacheada || fetch(request).catch(() => caches.match('/')))
+      fetch(request)
+        .then((respuesta) => {
+          const copia = respuesta.clone();
+          caches.open(CACHE_VERSION).then((cache) => cache.put(request, copia));
+          return respuesta;
+        })
+        .catch(() => caches.match(request).then((cacheada) => cacheada || caches.match('/')))
     );
     return;
   }
